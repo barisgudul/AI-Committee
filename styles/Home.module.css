@@ -1,168 +1,786 @@
+/* styles/Home.module.css (Final Versiyon) */
+
 .page {
-  --gray-rgb: 0, 0, 0;
-  --gray-alpha-200: rgba(var(--gray-rgb), 0.08);
-  --gray-alpha-100: rgba(var(--gray-rgb), 0.05);
-
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-
-  display: grid;
-  grid-template-rows: 20px 1fr 20px;
-  align-items: center;
-  justify-items: center;
-  min-height: 100svh;
-  padding: 80px;
-  gap: 64px;
-  font-family: var(--font-geist-sans);
-}
-
-@media (prefers-color-scheme: dark) {
-  .page {
-    --gray-rgb: 255, 255, 255;
-    --gray-alpha-200: rgba(var(--gray-rgb), 0.145);
-    --gray-alpha-100: rgba(var(--gray-rgb), 0.06);
-
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
-  }
-}
-
-.main {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  grid-row-start: 2;
+  min-height: 100vh; /* Ekran yüksekliğini kapla */
+  max-height: 100vh; /* Fazla taşmayı engelle */
+  width: 100%;
+  padding: 1rem; /* Yanlardan ve üstten boşluk */
+  background-color: var(--background-color);
+  overflow: hidden; /* Kendi içindeki elementlerin taşmasını yönetmesini sağla */
 }
 
-.main ol {
-  font-family: var(--font-geist-mono);
-  padding-left: 0;
-  margin: 0;
+.chatContainer {
+  flex-grow: 1; /* Ana içeriğin mevcut alanı doldurmasını sağlar */
+  overflow: hidden; /* Kendi içindeki .messageList'in scroll etmesini sağlar */
+  display: flex;
+  flex-direction: column;
+  padding: 0 1rem; /* Yanlardan boşluk */
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.messageList {
+  flex-grow: 1; /* Mesaj listesinin kalan alanı kaplamasını sağlar */
+  overflow-y: auto; /* Mesajların taştığında sadece bu alanın scroll etmesini sağlar */
+  padding-right: 0.5rem; /* Kaydırma çubuğu için sağda boşluk */
+  padding-bottom: 1rem; /* Footer ile çakışmaması için */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Mesajlar arasındaki boşluğu artır */
+  scroll-behavior: smooth; /* Yumuşak kaydırma */
+}
+
+.messageContainer {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: var(--secondary-background);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary-text-color);
+}
+
+.messageContent {
+  padding: 1rem;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: 100%;
+  line-height: 1.7;
+  box-shadow: var(--shadow-sm);
+}
+
+.messageContent > :first-child { margin-top: 0; }
+.messageContent > :last-child { margin-bottom: 0; }
+
+.userMessage {
+  justify-content: flex-end; /* Mesajı sağa yasla */
+}
+.userMessage .messageContent {
+  /* Daha önce var(--user-message-bg) idi. Şimdi daha açık bir renge çevirelim. */
+  background-color: var(--secondary-background); /* Gri arkaplan */
+  color: var(--text-color); /* Ana metin rengi */
+  border: 1px solid var(--border-color); /* Hafif bir çerçeve */
+}
+
+.expandButton {
+  background: none;
+  border: none;
+  color: var(--secondary-text-color);
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.5rem 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 0.2s ease;
+}
+.expandButton:hover {
+  color: var(--text-color);
+}
+.chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+.chevronExpanded {
+  transform: rotate(180deg);
+}
+
+.expandedView {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--secondary-background);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+.expandedView h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+.separator {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 1rem 0;
+}
+
+.inlineCode {
+  background-color: var(--secondary-background);
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: "SF Mono", "Menlo", monospace;
+}
+
+/* --- YENİLENMİŞ DÜŞÜNME SÜRECİ ANİMASYONU --- */
+.thinkingContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  width: 100%;
+}
+
+.thinkingMessage {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1rem; /* Yazıyı biraz büyütelim */
+  color: var(--secondary-text-color);
+  font-weight: 500;
+}
+
+.thinkingIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* İkonun etrafında dönen bir animasyon ekleyelim */
+    animation: icon-pulse 2s infinite ease-in-out;
+}
+
+@keyframes icon-pulse {
+    0% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.7; }
+}
+
+.thinkingProgressBar {
+  width: 100%;
+  height: 6px;
+  background-color: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* KESİNTİSİZ HAREKET EDEN YENİ YÜKLEME ÇUBUĞU */
+.thinkingProgressInfinite {
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gemini-gradient); /* Gradyanı kullan */
+  background-size: 400% 100%;
+  /* Gemini tarzı sonsuz hareket animasyonu */
+  animation: gemini-loading 3s linear infinite;
+}
+
+/* Bu keyframes'in zaten bir yerde olması lazım, yoksa ekleyin */
+@keyframes gemini-loading {
+    0% { background-position: 400% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* --- YENİ, DAHA ZARİF KARŞILAMA EKRANI --- */
+.welcomeContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem;
+  text-align: left;
+  height: 100%;
+  margin: auto;
+}
+
+.welcomeHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.welcomeTitle {
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 1rem 0 0 0;
+  background: var(--gemini-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: gradient-animation 5s ease infinite;
+  background-size: 200% 200%;
+}
+
+.suggestionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.suggestionCard {
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-family: inherit;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+}
+
+.suggestionCard:hover {
+  border-color: #d1d1d1; /* Mavi yerine daha belirgin bir gri */
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.cardText {
+  display: flex;
+  flex-direction: column;
+}
+.cardText strong {
+  font-weight: 500;
+  color: var(--text-color);
+  margin-bottom: 0.25rem;
+}
+.cardText span {
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+}
+.cardIcon {
+  color: var(--secondary-text-color);
+  transition: all 0.2s ease-in-out;
+}
+.suggestionCard:hover .cardIcon {
+  color: var(--text-color); /* İkincil gri yerine ana metin rengi */
+  transform: translateX(4px);
+}
+
+@media (max-width: 700px) {
+  .suggestionsGrid { grid-template-columns: 1fr; }
+  .welcomeTitle { font-size: 2rem; }
+}
+
+/* --- TIMELINE STYLES --- */
+.timelineContainer {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  margin-bottom: 20px;
+}
+
+.timelineEmpty {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  font-style: italic;
+}
+
+.timelineCollapsed {
+  text-align: center;
+  color: #999;
+  padding: 12px;
+  font-size: 0.875rem;
+  font-style: italic;
+  background: #f5f5f5;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.timelineStep {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.timelineStep:last-child {
+  margin-bottom: 0;
+}
+
+.timelineStatus {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.statusIcon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.statusRunning {
+  background: #ff9800;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.statusCompleted {
+  background: #4caf50;
+  color: white;
+}
+
+.statusError {
+  background: #f44336;
+  color: white;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.timelineContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.timelineHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.timelineIcon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.timelineTitle {
+  font-weight: 600;
+  color: #333;
   font-size: 14px;
-  line-height: 24px;
-  letter-spacing: -0.01em;
-  list-style-position: inside;
 }
 
-.main li:not(:last-of-type) {
+.timelineDetails {
+  color: #666;
+  font-size: 13px;
+  line-height: 1.4;
   margin-bottom: 8px;
 }
 
-.main code {
-  font-family: inherit;
-  background: var(--gray-alpha-100);
-  padding: 2px 4px;
+.timelineCode {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
   border-radius: 4px;
+  padding: 8px;
+  margin-top: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.timelineCode pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.timelineAnswer {
+  background: #e8f5e8;
+  border: 1px solid #c8e6c9;
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.timelineConnector {
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: -16px;
+  width: 2px;
+  background: #e0e0e0;
+}
+
+/* Plan Styles */
+.planContainer {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.planSection {
+  margin-bottom: 20px;
+}
+
+.planSection:last-child {
+  margin-bottom: 0;
+}
+
+.planSectionTitle {
+  font-size: 16px;
   font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 4px;
 }
 
-.ctas {
+.planText {
+  color: #34495e;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.implementationSteps {
+  margin-top: 12px;
+}
+
+.implementationStep {
   display: flex;
-  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
 }
 
-.ctas a {
-  appearance: none;
-  border-radius: 128px;
-  height: 48px;
-  padding: 0 20px;
+.implementationStep:last-child {
+  margin-bottom: 0;
+}
+
+.stepNumber {
+  width: 32px;
+  height: 32px;
+  background: #3498db;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.stepContent {
+  flex: 1;
+}
+
+.stepTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 6px 0;
+}
+
+.stepDetails {
+  color: #7f8c8d;
+  line-height: 1.5;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* --- YENİ, DAHA MİNİMAL INPUT ALANI --- */
+.footer {
+  flex-shrink: 0; /* Footer'ın küçülmesini engelle */
+  padding: 0.75rem 0; /* Footer için boşluk */
+  max-width: 824px;
+  width: 100%;
+  margin: 0 auto;
+  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -2px 10px -2px rgba(0, 0, 0, 0.05);
+}
+
+.inputForm {
+  position: relative;
+}
+
+.input {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  padding-right: 3.5rem;
+  border-radius: 12px; /* Köşeleri biraz daha keskinleştirelim */
+  border: 1px solid var(--border-color);
+  font-size: 1rem;
+  background-color: var(--secondary-background);
+  font-family: inherit;
+  transition: all 0.2s ease;
+  
+  /* --- YENİ EKLENENLER --- */
+  resize: none; /* Kullanıcının manuel olarak boyutlandırmasını engelle */
+  overflow-y: auto; /* İçerik çok uzarsa scrollbar çıksın */
+  max-height: 200px; /* Sonsuza kadar büyümesini engelle, 200px'den sonra scroll etsin */
+  line-height: 1.5; /* Satır yüksekliğini ayarlayalım */
+}
+.input:focus {
+  outline: none;
+  background-color: var(--background-color);
+  border-color: #c0c0c0; /* Mavi yerine nötr bir gri */
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04); /* Mavi yerine çok soluk bir siyah gölge */
+}
+
+/* Input alanının "düşünüyor" durumundaki stili */
+.inputThinking {
+  position: relative;
+  overflow: hidden;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.inputThinking::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 8px;
+  padding: 1px; /* Gradyan çizgi kalınlığı */
+  background: var(--accent-color);
+  background-size: 200% 200%;
+  animation: gradient-animation 3s ease infinite;
+  -webkit-mask: 
+     linear-gradient(#fff 0 0) content-box, 
+     linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: 
+     linear-gradient(#fff 0 0) content-box, 
+     linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+@keyframes gradient-animation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.sendButton {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%; /* Daha modern bir görünüm için tam daire yapalım */
   border: none;
-  border: 1px solid transparent;
-  transition:
-    background 0.2s,
-    color 0.2s,
-    border-color 0.2s;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 500;
+  transition: all 0.25s ease;
+  
+  /* Varsayılan (disabled) durum */
+  background-color: #e9e9e9;
+  color: #a0a0a0;
 }
 
-a.primary {
-  background: var(--foreground);
-  color: var(--background);
-  gap: 8px;
+/* SADECE YAZI YAZILDIĞINDA (aktif olduğunda) bu stiller devreye girecek */
+.sendButton:not(:disabled) {
+  background: var(--gemini-gradient);
+  background-size: 200% 200%;
+  animation: gradient-animation 4s ease infinite;
+  color: white;
+  transform: translateY(-50%) scale(1.05); /* Hafifçe büyüsün */
+  box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.2);
 }
 
-a.secondary {
-  border-color: var(--gray-alpha-200);
-  min-width: 158px;
+.sendButton:not(:disabled):hover {
+    transform: translateY(-50%) scale(1.1); /* Üzerine gelince biraz daha büyüsün */
+    box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.25);
 }
 
-.footer {
-  grid-row-start: 3;
-  display: flex;
-  gap: 24px;
+/* Disabled durumunu tekrar tanımlamaya gerek yok, varsayılan stil onu karşılıyor */
+.sendButton:disabled {
+  cursor: not-allowed;
 }
 
-.footer a {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.disclaimer {
+    display: none; /* Artık daha temiz bir görünüm için bunu gizleyebiliriz */
 }
 
-.footer img {
-  flex-shrink: 0;
+/* Orchestration için yeni stiller */
+.thoughtsContainer {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: var(--secondary-background);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
 }
 
-/* Enable hover only on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
-    background: var(--button-primary-hover);
-    border-color: transparent;
-  }
-
-  a.secondary:hover {
-    background: var(--button-secondary-hover);
-    border-color: transparent;
-  }
-
-  .footer a:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
+.thoughtsContainer h5 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
-@media (max-width: 600px) {
-  .page {
-    padding: 32px;
-    padding-bottom: 80px;
-  }
-
-  .main {
-    align-items: center;
-  }
-
-  .main ol {
-    text-align: center;
-  }
-
-  .ctas {
-    flex-direction: column;
-  }
-
-  .ctas a {
-    font-size: 14px;
-    height: 40px;
-    padding: 0 16px;
-  }
-
-  a.secondary {
-    min-width: auto;
-  }
-
-  .footer {
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-  }
+.thoughtItem {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-color);
 }
 
-@media (prefers-color-scheme: dark) {
-  .logo {
-    filter: invert();
-  }
+.thoughtItem:last-child {
+    border-bottom: none;
+}
+
+.toolsContainer {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: var(--secondary-background);
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-color);
+}
+
+.toolsContainer h5 {
+    margin: 0 0 0.5rem 0;
+    color: var(--accent-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.toolItem {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.toolItem:last-child {
+    border-bottom: none;
+}
+
+.toolItem strong {
+    color: var(--accent-color);
+}
+
+/* Live streaming stilleri */
+.liveThoughts {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: rgba(59, 130, 246, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+    animation: fadeIn 0.3s ease-in;
+}
+
+.liveThoughts h5 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.liveTools {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: rgba(16, 185, 129, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid var(--accent-color);
+    animation: fadeIn 0.3s ease-in;
+}
+
+.liveTools h5 {
+    margin: 0 0 0.5rem 0;
+    color: var(--accent-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.streamingAnswer {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: rgba(168, 85, 247, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid #a855f7;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.streamingAnswer h5 {
+    margin: 0 0 0.5rem 0;
+    color: #a855f7;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Final answer ve plan render stilleri */
+.finalAnswerSection {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    background-color: rgba(168, 85, 247, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    animation: fadeIn 0.3s ease-in;
+}
+
+.finalPlanSection {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    background-color: rgba(59, 130, 246, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    animation: fadeIn 0.3s ease-in;
+}
+
+.finalPlanSection h3 {
+    margin: 1.5rem 0 0.75rem 0;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.finalPlanSection h3:first-child {
+    margin-top: 0;
+}
+
+.planStep {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: var(--secondary-background);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.planStep h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.planStep p {
+    margin: 0.5rem 0;
+    color: var(--secondary-text-color);
+    line-height: 1.6;
 }

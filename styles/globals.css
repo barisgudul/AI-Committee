@@ -1,42 +1,41 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* styles/globals.css */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Yeni Monokromatik ve Zarif Renk Paleti */
+  --background-color: #ffffff;
+  --secondary-background: #f7f7f7;
+  --text-color: #111111; /* Tam siyah değil, daha yumuşak */
+  --secondary-text-color: #666666;
+  --border-color: #ebebeb;
+  /* --- YENİ EKLENENLER --- */
+  --gemini-gradient: linear-gradient(90deg, #4285F4, #9B55B6, #FBBC05, #EA4335);
+  --user-message-bg: linear-gradient(135deg, #1e1e1e, #333333); /* Gradyanı daha koyu ve şık yapalım */
+  /* --- BİTTİ --- */
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 }
 
 html,
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  padding: 0;
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* Yatay kaydırmayı engelle */
+  overflow-y: hidden; /* Varsayılan olarak dikey kaydırmayı engelle, konteyner yönetecek */
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+/* Arka plan animasyonunu kaldıralım, daha sakin bir görünüm için */
+body::before {
+  display: none;
 }
