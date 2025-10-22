@@ -11,7 +11,7 @@ interface ProcessTimelineProps {
 }
 
 // Performans için sadece son N adımı göster
-const MAX_VISIBLE_STEPS = 15;
+const MAX_VISIBLE_STEPS = 20;
 
 // React.memo ile gereksiz re-render'ları önle
 export const ProcessTimeline: React.FC<ProcessTimelineProps> = React.memo(({ steps }) => {
@@ -65,12 +65,38 @@ export const ProcessTimeline: React.FC<ProcessTimelineProps> = React.memo(({ ste
     return false; // Re-render et
   }
   
+  // Array referansı aynıysa değişiklik yoktur
+  if (prevProps.steps === nextProps.steps) {
+    return true; // Re-render etme
+  }
+  
   const prevLast = prevProps.steps[prevProps.steps.length - 1];
   const nextLast = nextProps.steps[nextProps.steps.length - 1];
   
-  return prevLast?.id === nextLast?.id && 
-         prevLast?.status === nextLast?.status &&
-         JSON.stringify(prevLast?.payload) === JSON.stringify(nextLast?.payload);
+  // Son step yoksa veya ID'leri farklıysa re-render et
+  if (!prevLast || !nextLast || prevLast.id !== nextLast.id) {
+    return false; // Re-render et
+  }
+  
+  // Status değişikliğinde re-render et
+  if (prevLast.status !== nextLast.status) {
+    return false; // Re-render et
+  }
+  
+  // JSON.stringify yerine shallow comparison - çok daha hızlı
+  const prevPayload = prevLast.payload;
+  const nextPayload = nextLast.payload;
+  
+  // Payload'un temel özelliklerini karşılaştır (JSON.stringify'dan çok daha hızlı)
+  if (prevPayload === nextPayload) return true; // Aynı referans
+  
+  // content/message gibi önemli alanları kontrol et
+  const prevContent = ('content' in prevPayload ? prevPayload.content : '') || 
+                      ('message' in prevPayload ? prevPayload.message : '') || '';
+  const nextContent = ('content' in nextPayload ? nextPayload.content : '') || 
+                      ('message' in nextPayload ? nextPayload.message : '') || '';
+  
+  return prevContent === nextContent;
 });
 
 ProcessTimeline.displayName = 'ProcessTimeline';

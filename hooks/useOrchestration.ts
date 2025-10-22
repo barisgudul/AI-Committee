@@ -6,9 +6,9 @@ import { OrchestrationState } from '../types/ProcessTypes';
 import { eventHandlers } from './eventHandlers';
 
 // Event batching için yardımcı değişkenler
-const BATCH_INTERVAL = 100; // ms - Event'leri 100ms'de bir toplu işle
+const BATCH_INTERVAL = 300; // ms - Event'leri 300ms'de bir toplu işle (performans için optimize edildi)
 
-const MAX_STEPS = 30; // Bellek optimizasyonu için maksimum step sayısı (performans için düşürüldü)
+const MAX_STEPS = 50; // Bellek optimizasyonu için maksimum step sayısı
 
 export function useOrchestration() {
   const [state, setState] = useState<OrchestrationState>({

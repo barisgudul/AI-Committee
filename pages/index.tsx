@@ -85,23 +85,55 @@ const markdownComponents = {
   }
 };
 
-// AI Mesajını gösterecek yeni component - Orchestration ile güncellenmiş
+// AI Mesajını gösterecek yeni component - React.memo ile optimize edildi
 const ModelMessageComponent: FC<{ 
     message: ModelMessage;
-}> = ({ message }) => {
+}> = React.memo(({ message }) => {
+    // Markdown içeriğini memoize et
+    const renderedContent = useMemo(() => (
+        <ReactMarkdown components={markdownComponents}>
+            {message.refinedAnalysis}
+        </ReactMarkdown>
+    ), [message.refinedAnalysis]);
+
     return (
         <div className={styles.messageContainer}>
             <div className={styles.avatar}>
                 <BrainIcon />
             </div>
             <div className={styles.messageContent}>
-                <ReactMarkdown components={markdownComponents}>
-                    {message.refinedAnalysis}
-                </ReactMarkdown>
+                {renderedContent}
             </div>
         </div>
     );
-};
+}, (prevProps, nextProps) => {
+    // Sadece refinedAnalysis değişirse re-render et
+    return prevProps.message.refinedAnalysis === nextProps.message.refinedAnalysis;
+});
+
+ModelMessageComponent.displayName = 'ModelMessageComponent';
+
+// Kullanıcı mesajını gösterecek component - React.memo ile optimize edildi
+const UserMessageComponent: FC<{ 
+    message: UserMessage;
+}> = React.memo(({ message }) => {
+    // Markdown içeriğini memoize et
+    const renderedContent = useMemo(() => (
+        <ReactMarkdown components={markdownComponents}>{message.text}</ReactMarkdown>
+    ), [message.text]);
+
+    return (
+        <div className={`${styles.messageContainer} ${styles.userMessage}`}>
+            <div className={styles.messageContent}>
+                {renderedContent}
+            </div>
+        </div>
+    );
+}, (prevProps, nextProps) => {
+    return prevProps.message.text === nextProps.message.text;
+});
+
+UserMessageComponent.displayName = 'UserMessageComponent';
 
 // FINAL_ANSWER ve FINAL_PLAN adımlarını render eden component - React.memo ile optimize edildi
 const FinalStepRenderer: FC<{ steps: ProcessStep[] }> = React.memo(({ steps }) => {
@@ -110,61 +142,167 @@ const FinalStepRenderer: FC<{ steps: ProcessStep[] }> = React.memo(({ steps }) =
         [steps]
     );
     
-    if (finalSteps.length === 0) return null;
+    // Her step'in render'ını memoize et
+    const renderedSteps = useMemo(() => {
+        if (finalSteps.length === 0) return null;
+        
+        return finalSteps.map(step => {
+            if (step.type === 'FINAL_ANSWER') {
+                return (
+                    <div key={step.id} className={styles.finalAnswerSection}>
+                        <ReactMarkdown components={markdownComponents}>
+                            {step.payload.content}
+                        </ReactMarkdown>
+                    </div>
+                );
+            } else if (step.type === 'FINAL_PLAN') {
+                const plan = step.payload.plan;
+                return (
+                    <div key={step.id} className={styles.finalPlanSection}>
+                        <h3>🎯 Nihai Karar</h3>
+                        <ReactMarkdown components={markdownComponents}>
+                            {plan.finalDecision}
+                        </ReactMarkdown>
+                        
+                        <h3>💡 Gerekçe</h3>
+                        <ReactMarkdown components={markdownComponents}>
+                            {plan.justification}
+                        </ReactMarkdown>
+                        
+                        <h3>📋 Uygulama Planı</h3>
+                        {plan.implementationPlan.map(p => (
+                            <div key={p.step} className={styles.planStep}>
+                                <h4>Adım {p.step}: {p.title}</h4>
+                                <ReactMarkdown components={markdownComponents}>
+                                    {p.details}
+                                </ReactMarkdown>
+                            </div>
+                        ))}
+                    </div>
+                );
+            }
+            return null;
+        });
+    }, [finalSteps]);
     
-    return (
-        <>
-            {finalSteps.map(step => {
-                if (step.type === 'FINAL_ANSWER') {
-                    return (
-                        <div key={step.id} className={styles.finalAnswerSection}>
-                            <ReactMarkdown components={markdownComponents}>
-                                {step.payload.content}
-                            </ReactMarkdown>
-                        </div>
-                    );
-                } else if (step.type === 'FINAL_PLAN') {
-                    const plan = step.payload.plan;
-                    return (
-                        <div key={step.id} className={styles.finalPlanSection}>
-                            <h3>🎯 Nihai Karar</h3>
-                            <ReactMarkdown components={markdownComponents}>
-                                {plan.finalDecision}
-                            </ReactMarkdown>
-                            
-                            <h3>💡 Gerekçe</h3>
-                            <ReactMarkdown components={markdownComponents}>
-                                {plan.justification}
-                            </ReactMarkdown>
-                            
-                            <h3>📋 Uygulama Planı</h3>
-                            {plan.implementationPlan.map(p => (
-                                <div key={p.step} className={styles.planStep}>
-                                    <h4>Adım {p.step}: {p.title}</h4>
-                                    <ReactMarkdown components={markdownComponents}>
-                                        {p.details}
-                                    </ReactMarkdown>
-                                </div>
-                            ))}
-                        </div>
-                    );
-                }
-                return null;
-            })}
-        </>
-    );
+    return <>{renderedSteps}</>;
+}, (prevProps, nextProps) => {
+    // Özel karşılaştırma - final step sayısı ve içeriği aynıysa re-render etme
+    const prevFinal = prevProps.steps.filter(s => s.type === 'FINAL_ANSWER' || s.type === 'FINAL_PLAN');
+    const nextFinal = nextProps.steps.filter(s => s.type === 'FINAL_ANSWER' || s.type === 'FINAL_PLAN');
+    
+    if (prevFinal.length !== nextFinal.length) return false;
+    if (prevFinal.length === 0) return true;
+    
+    // Son final step'i karşılaştır
+    const prevLast = prevFinal[prevFinal.length - 1];
+    const nextLast = nextFinal[nextFinal.length - 1];
+    
+    return prevLast?.id === nextLast?.id && 
+           JSON.stringify(prevLast?.payload) === JSON.stringify(nextLast?.payload);
 });
 
 FinalStepRenderer.displayName = 'FinalStepRenderer';
+
+// localStorage için sabitler
+const STORAGE_KEY = 'ai-komitesi-history';
+const MAX_HISTORY_MESSAGES = 20; // Maksimum saklanacak mesaj sayısı (performans için sınırlandı)
+const MAX_MESSAGE_LENGTH = 10000; // Maksimum mesaj uzunluğu (karakterde)
+
+// Mesajı truncate et (çok uzun mesajlar için)
+const truncateMessage = (message: Message): Message => {
+    if (message.role === 'user') {
+        if (message.text.length > MAX_MESSAGE_LENGTH) {
+            return {
+                ...message,
+                text: message.text.substring(0, MAX_MESSAGE_LENGTH) + '\n\n... (mesaj çok uzun olduğu için kısaltıldı)'
+            };
+        }
+        return message;
+    } else {
+        if (message.refinedAnalysis.length > MAX_MESSAGE_LENGTH) {
+            return {
+                ...message,
+                refinedAnalysis: message.refinedAnalysis.substring(0, MAX_MESSAGE_LENGTH) + '\n\n... (mesaj çok uzun olduğu için kısaltıldı)'
+            };
+        }
+        return message;
+    }
+};
+
+// localStorage'dan history yükle
+const loadHistoryFromStorage = (): Message[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored) as Message[];
+            // Son MAX_HISTORY_MESSAGES mesajı al
+            return parsed.slice(-MAX_HISTORY_MESSAGES);
+        }
+    } catch (error) {
+        console.error('History yüklenemedi:', error);
+        // Hatalı veri varsa temizle
+        localStorage.removeItem(STORAGE_KEY);
+    }
+    return [];
+};
+
+// localStorage'a history kaydet
+const saveHistoryToStorage = (history: Message[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+        // Son MAX_HISTORY_MESSAGES mesajı al ve truncate et
+        const toSave = history.slice(-MAX_HISTORY_MESSAGES).map(truncateMessage);
+        const jsonString = JSON.stringify(toSave);
+        
+        // localStorage quota kontrolü (5MB limiti)
+        if (jsonString.length > 4.5 * 1024 * 1024) {
+            console.warn('History çok büyük, daha az mesaj kaydediliyor');
+            // Daha az mesaj kaydet
+            const reducedHistory = history.slice(-Math.floor(MAX_HISTORY_MESSAGES / 2)).map(truncateMessage);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(reducedHistory));
+        } else {
+            localStorage.setItem(STORAGE_KEY, jsonString);
+        }
+    } catch (error) {
+        console.error('History kaydedilemedi:', error);
+        // Storage dolu olabilir, temizle ve daha az veri kaydet
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+            // Son 5 mesajı kaydetmeyi dene
+            const minimalHistory = history.slice(-5).map(truncateMessage);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(minimalHistory));
+        } catch {
+            // ignore - storage tamamen dolu
+            console.error('localStorage tamamen dolu, history kaydedilemedi');
+        }
+    }
+};
 
 export default function Home() {
     const [input, setInput] = useState('');
     const [history, setHistory] = useState<Message[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
     
     // --- 2. YENİ STATE: Anında yükleme durumu için ---
     const [isSending, setIsSending] = useState(false);
+    
+    // Component mount olduğunda history'yi yükle
+    useEffect(() => {
+        const loaded = loadHistoryFromStorage();
+        setHistory(loaded);
+        setIsHistoryLoaded(true);
+    }, []);
+    
+    // History değiştiğinde localStorage'a kaydet (ama sadece yüklendikten sonra)
+    useEffect(() => {
+        if (isHistoryLoaded && history.length > 0) {
+            saveHistoryToStorage(history);
+        }
+    }, [history, isHistoryLoaded]);
     
     // Yeni orchestration hook'u
     const {
@@ -235,7 +373,9 @@ export default function Home() {
                         refinedAnalysis: finalAnswer
                     };
                     
-                    return [...prevHistory, newModelMessage];
+                    // Son MAX_HISTORY_MESSAGES mesajı tut (bellek optimizasyonu)
+                    const newHistory = [...prevHistory, newModelMessage];
+                    return newHistory.slice(-MAX_HISTORY_MESSAGES);
                 }
                 return prevHistory;
             });
@@ -274,7 +414,8 @@ export default function Home() {
         lastProcessedComplete.current = false; // Yeni işlem başladı, ref'i sıfırla
 
         const newUserMessage: UserMessage = { role: 'user', text: input };
-        const newHistory = [...history, newUserMessage];
+        // Son MAX_HISTORY_MESSAGES mesajı tut (bellek optimizasyonu)
+        const newHistory = [...history, newUserMessage].slice(-MAX_HISTORY_MESSAGES);
         setHistory(newHistory);
         setInput('');
 
@@ -310,17 +451,16 @@ export default function Home() {
                         <WelcomeScreen onSuggestionClick={handleSuggestionClick} />
                     ) : (
                         <>
-                            {/* Geçmiş mesajları göster */}
+                            {/* Geçmiş mesajları göster - optimize edilmiş rendering */}
                             {history.map((msg, index) =>
                                 msg.role === 'user' ? (
-                                    <div key={`hist-${index}`} className={`${styles.messageContainer} ${styles.userMessage}`}>
-                                         <div className={styles.messageContent}>
-                                            <ReactMarkdown components={markdownComponents}>{msg.text}</ReactMarkdown>
-                                        </div>
-                                    </div>
+                                    <UserMessageComponent 
+                                        key={`user-${index}-${msg.text.substring(0, 20)}`} 
+                                        message={msg}
+                                    />
                                 ) : (
                                     <ModelMessageComponent 
-                                        key={`hist-${index}`} 
+                                        key={`model-${index}-${msg.refinedAnalysis.substring(0, 20)}`} 
                                         message={msg}
                                     />
                                 )

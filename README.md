@@ -110,7 +110,7 @@ Then **ArbiterAI** synthesizes these three perspectives to create a solid, actio
                │
      ┌─────────┼──────────────┬────────────┐
      │         │              │            │
- ┌───▼──┐ ┌─────▼───┐ ┌──────▼────┐ ┌────▼────┐
+ ┌───▼──-┐ ┌─────▼───┐ ┌──────▼────┐ ┌────▼────┐
  │Arbiter│ │ Refiner │ │ Chief     │ │  Tools  │
  │Agent  │ │ Agent   │ │ Architect │ │  Search │
  └───────┘ └─────────┘ └───────────┘ └─────────┘
