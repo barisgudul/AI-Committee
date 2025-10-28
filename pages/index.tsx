@@ -442,8 +442,28 @@ export default function Home() {
         }
     }, [handleSubmit]);
 
+    // Yeni sohbet başlatma fonksiyonu - useCallback ile optimize edildi
+    const handleNewChat = useCallback(() => {
+        setHistory([]);
+        reset();
+        setIsSending(false);
+        // localStorage'ı temizle
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    }, [reset]);
+
     return (
         <div className={styles.page}>
+            {/* Yeni Sohbet Butonu - sadece history varsa göster */}
+            {history.length > 0 && !isThinking && (
+                <div className={styles.newChatButtonContainer}>
+                    <button onClick={handleNewChat} className={styles.newChatButton}>
+                        ✨ Yeni Sohbet
+                    </button>
+                </div>
+            )}
+            
             <main className={styles.chatContainer}>
                 <div className={styles.messageList}>
                     {/* Karşılama mesajı ve öneriler */}
