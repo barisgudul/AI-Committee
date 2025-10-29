@@ -9,7 +9,10 @@ import { SendIcon, BrainIcon, ArbiterLogoIcon, ArrowRightIcon } from '../compone
 import { ProcessTimeline } from '../components/ProcessTimeline';
 import { useOrchestration } from '../hooks/useOrchestration';
 import { ProcessStep } from '../types/ProcessTypes';
-import { ThinkingProcess } from '../components/ThinkingProcess'; // <-- 1. EKLENEN IMPORT
+import { ThinkingProcess } from '../components/ThinkingProcess';
+import { FileDropZone } from '../components/FileDropZone';
+import { FileList } from '../components/FileList';
+import { useFileUpload } from '../hooks/useFileUpload';
 
 // State yapımızı güncelliyoruz
 interface UserMessage {
@@ -24,28 +27,41 @@ interface ModelMessage {
 type Message = UserMessage | ModelMessage;
 
 // --- YENİ KARŞILAMA EKRANI BİLEŞENİ ---
-const WelcomeScreen: FC<{ onSuggestionClick: (suggestion: string) => void }> = ({ onSuggestionClick }) => {
+const WelcomeScreen: FC<{ 
+  onSuggestionClick: (suggestion: string) => void;
+  onCodeAnalysisClick: () => void;
+}> = ({ onSuggestionClick, onCodeAnalysisClick }) => {
     // Önerileri daha zengin bir yapıya çevirelim
     const suggestions = [
+        {
+            title: "📁 Kod Klasörü Analizi",
+            description: "Tüm projeni sürükle-bırak ile yükle ve AI'ya incelet.",
+            query: "",
+            isCodeAnalysis: true
+        },
         {
             title: "Blog Sitesi Kurulumu",
             description: "Next.js ve Supabase ile adım adım plan oluştur.",
             query: "Next.js ve Supabase ile bir blog sitesi nasıl kurarım?",
+            isCodeAnalysis: false
         },
         {
             title: "Kütüphane Karşılaştırması",
             description: "React form yönetimi için en iyi kütüphaneleri analiz et.",
             query: "React'ta form yönetimi için en iyi kütüphaneleri karşılaştır.",
+            isCodeAnalysis: false
         },
         {
             title: "Component Oluşturma",
             description: "TailwindCSS ile responsive bir kart bileşeni tasarla.",
             query: "TailwindCSS kullanarak responsive bir kart bileşeni oluştur.",
+            isCodeAnalysis: false
         },
         {
             title: "API Endpoint'leri Yazma",
             description: "Bir Express.js API'si için temel CRUD işlemlerini hazırla.",
             query: "Bir Express.js API'si için temel CRUD işlemlerini yaz.",
+            isCodeAnalysis: false
         }
     ];
 
@@ -57,7 +73,11 @@ const WelcomeScreen: FC<{ onSuggestionClick: (suggestion: string) => void }> = (
             </div>
             <div className={styles.suggestionsGrid}>
                 {suggestions.map((sugg, i) => (
-                    <button key={i} className={styles.suggestionCard} onClick={() => onSuggestionClick(sugg.query)}>
+                    <button 
+                        key={i} 
+                        className={styles.suggestionCard} 
+                        onClick={() => sugg.isCodeAnalysis ? onCodeAnalysisClick() : onSuggestionClick(sugg.query)}
+                    >
                         <div className={styles.cardText}>
                             <strong>{sugg.title}</strong>
                             <span>{sugg.description}</span>
@@ -290,6 +310,11 @@ export default function Home() {
     // --- 2. YENİ STATE: Anında yükleme durumu için ---
     const [isSending, setIsSending] = useState(false);
     
+    // --- FILE UPLOAD STATE ---
+    const [showFileModal, setShowFileModal] = useState(false);
+    const [showAnalyzeButton, setShowAnalyzeButton] = useState(false);
+    const fileUpload = useFileUpload();
+    
     // Component mount olduğunda history'yi yükle
     useEffect(() => {
         const loaded = loadHistoryFromStorage();
@@ -452,6 +477,215 @@ export default function Home() {
             localStorage.removeItem(STORAGE_KEY);
         }
     }, [reset]);
+    
+    // --- FILE UPLOAD FONKSİYONLARI ---
+    const handleCodeAnalysisClick = useCallback(() => {
+        setShowFileModal(true);
+    }, []);
+    
+    const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
+        await fileUpload.uploadFiles(files);
+        setShowAnalyzeButton(true);
+    }, [fileUpload]);
+    
+    const handleAnalyzeCode = useCallback(async () => {
+        if (!fileUpload.sessionId || fileUpload.files.length === 0) {
+            alert('Lütfen önce dosyaları yükleyin');
+            return;
+        }
+        
+        // Debug: SessionId'yi kontrol et
+        console.log('[ANALYZE] SessionId:', fileUpload.sessionId);
+        console.log('[ANALYZE] Files count:', fileUpload.files.length);
+        
+        setShowFileModal(false);
+        setIsSending(true);
+        lastProcessedComplete.current = false;
+        
+        // Dosya listesi özeti oluştur
+        const fileListSummary = fileUpload.files
+            .slice(0, 10)
+            .map(f => `- ${f.path}`)
+            .join('\n');
+        const moreFiles = fileUpload.files.length > 10 ? `\n... ve ${fileUpload.files.length - 10} dosya daha` : '';
+        
+        const analysisMessage = `📁 **Kod Analizi Başlatıldı**\n\n${fileUpload.files.length} dosya analiz ediliyor:\n${fileListSummary}${moreFiles}`;
+        const newUserMessage: UserMessage = { role: 'user', text: analysisMessage };
+        setHistory(prev => [...prev, newUserMessage]);
+        
+        try {
+            // Özel API endpoint'i için custom fetch
+            const requestBody = { 
+                sessionId: fileUpload.sessionId,
+                analysisType: 'full',
+                history: history.map(msg => ({
+                    role: msg.role,
+                    parts: [{ text: msg.role === 'user' ? msg.text : msg.refinedAnalysis }]
+                }))
+            };
+            
+            console.log('[ANALYZE] Request body:', { ...requestBody, history: `[${requestBody.history.length} items]` });
+            
+            const response = await fetch('/api/analyze-codebase', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            
+            // SSE stream'i işle ve history'ye ekle
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new Error('Response body is not readable');
+            }
+            
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let analysisText = '';
+            
+            // Yeni bir model mesajı oluştur (streaming için)
+            const streamingMessage: ModelMessage = {
+                role: 'model',
+                initialAnalysis: '',
+                refinedAnalysis: ''
+            };
+            
+            // Başlangıç mesajını history'ye ekle
+            setHistory(prev => [...prev, streamingMessage]);
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const eventData = JSON.parse(line.slice(6));
+                            
+                            // Debug: Event tiplerini logla
+                            if (process.env.NODE_ENV === 'development') {
+                                console.log('[ANALYZE-FRONTEND] Event:', eventData.type, eventData.source);
+                            }
+                            
+                            // Stream control events'leri atla
+                            if (eventData.type === 'stream_start' || eventData.type === 'stream_end') {
+                                continue;
+                            }
+                            
+                            // Event tipine göre işle
+                            if (eventData.type === 'final_chunk') {
+                                // Streaming chunk'ı birleştir (hem arbiter hem refiner'dan gelebilir)
+                                const chunk = eventData.payload?.chunk || '';
+                                if (chunk) {
+                                    analysisText += chunk;
+                                    
+                                    // Streaming mesajını güncelle
+                                    setHistory(prev => {
+                                        const updated = [...prev];
+                                        const lastMessage = updated[updated.length - 1];
+                                        if (lastMessage && lastMessage.role === 'model') {
+                                            updated[updated.length - 1] = {
+                                                ...lastMessage,
+                                                refinedAnalysis: analysisText
+                                            };
+                                        }
+                                        return updated;
+                                    });
+                                }
+                            } else if (eventData.type === 'status') {
+                                // Status event'i - completed durumunda fullAnalysis var mı kontrol et
+                                if (eventData.payload?.status === 'completed') {
+                                    // Refiner veya Arbiter tamamlandı - fullAnalysis'ı al
+                                    const fullAnalysis = eventData.payload?.fullAnalysis;
+                                    if (fullAnalysis && typeof fullAnalysis === 'string') {
+                                        analysisText = fullAnalysis; // Tam analizi kullan
+                                    }
+                                    
+                                    // Final mesajı güncelle
+                                    setHistory(prev => {
+                                        const updated = [...prev];
+                                        const lastMessage = updated[updated.length - 1];
+                                        if (lastMessage && lastMessage.role === 'model') {
+                                            updated[updated.length - 1] = {
+                                                ...lastMessage,
+                                                refinedAnalysis: analysisText,
+                                                initialAnalysis: analysisText
+                                            };
+                                        }
+                                        return updated;
+                                    });
+                                }
+                            } else if (eventData.type === 'error') {
+                                // Hata durumu
+                                const errorMsg = eventData.payload?.error || 'Analiz sırasında bir hata oluştu';
+                                setHistory(prev => {
+                                    const updated = [...prev];
+                                    const lastMessage = updated[updated.length - 1];
+                                    if (lastMessage && lastMessage.role === 'model') {
+                                        updated[updated.length - 1] = {
+                                            ...lastMessage,
+                                            refinedAnalysis: `❌ **Hata**\n\n${errorMsg}`
+                                        };
+                                    }
+                                    return updated;
+                                });
+                            }
+                        } catch (e) {
+                            console.warn('[ANALYZE-FRONTEND] Event parse error:', e, line);
+                        }
+                    }
+                }
+            }
+            
+            // Stream tamamlandı - eğer mesaj hala boşsa final güncelleme yap
+            if (analysisText) {
+                setHistory(prev => {
+                    const updated = [...prev];
+                    const lastMessage = updated[updated.length - 1];
+                    if (lastMessage && lastMessage.role === 'model') {
+                        updated[updated.length - 1] = {
+                            ...lastMessage,
+                            refinedAnalysis: analysisText,
+                            initialAnalysis: analysisText
+                        };
+                    }
+                    return updated;
+                });
+            }
+            
+            setIsSending(false);
+            
+            // Analiz sonrası dosyaları temizle (isteğe bağlı)
+            // fileUpload.clearAllFiles();
+            
+        } catch (error) {
+            console.error('Code analysis error:', error);
+            setIsSending(false);
+            
+            // Hata mesajını göster
+            const errorMessage: ModelMessage = {
+                role: 'model',
+                initialAnalysis: '',
+                refinedAnalysis: `❌ **Analiz Hatası**\n\n${error instanceof Error ? error.message : 'Kod analizi sırasında bir hata oluştu. Lütfen tekrar deneyin.'}`
+            };
+            setHistory(prev => [...prev, errorMessage]);
+        }
+    }, [fileUpload, history]);
+    
+    // Dosyalar değiştiğinde analyze butonunu göster/gizle
+    useEffect(() => {
+        setShowAnalyzeButton(fileUpload.files.length > 0);
+    }, [fileUpload.files.length]);
 
     return (
         <div className={styles.page}>
@@ -468,7 +702,10 @@ export default function Home() {
                 <div className={styles.messageList}>
                     {/* Karşılama mesajı ve öneriler */}
                     {history.length === 0 && !isThinking && processSteps.length === 0 ? (
-                        <WelcomeScreen onSuggestionClick={handleSuggestionClick} />
+                        <WelcomeScreen 
+                            onSuggestionClick={handleSuggestionClick} 
+                            onCodeAnalysisClick={handleCodeAnalysisClick}
+                        />
                     ) : (
                         <>
                             {/* Geçmiş mesajları göster - optimize edilmiş rendering */}
@@ -517,6 +754,49 @@ export default function Home() {
                     <div ref={messagesEndRef} />
                 </div>
             </main>
+            
+            {/* File Upload Modal */}
+            {showFileModal && (
+                <div className={styles.fileModalBackdrop} onClick={() => setShowFileModal(false)}>
+                    <div className={styles.fileModal} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.fileModalHeader}>
+                            <h2>Kod Klasörü Analizi</h2>
+                            <button 
+                                className={styles.modalCloseButton}
+                                onClick={() => setShowFileModal(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className={styles.fileModalContent}>
+                            <FileDropZone 
+                                onFilesSelected={handleFilesSelected}
+                                uploadStatus={fileUpload.uploadStatus}
+                                disabled={fileUpload.uploadStatus.status === 'uploading'}
+                            />
+                            {fileUpload.files.length > 0 && (
+                                <FileList 
+                                    files={fileUpload.files}
+                                    onRemoveFile={fileUpload.removeFile}
+                                    onClearAll={fileUpload.clearAllFiles}
+                                    getFileContent={fileUpload.getFileContent}
+                                />
+                            )}
+                        </div>
+                        {showAnalyzeButton && fileUpload.files.length > 0 && (
+                            <div className={styles.fileModalFooter}>
+                                <button 
+                                    className={styles.analyzeButton}
+                                    onClick={handleAnalyzeCode}
+                                    disabled={fileUpload.uploadStatus.status === 'uploading'}
+                                >
+                                    🔍 Analiz Et ({fileUpload.files.length} dosya)
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <footer className={styles.footer}>
                 <form onSubmit={handleSubmit} className={styles.inputForm}>

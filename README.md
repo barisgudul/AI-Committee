@@ -19,6 +19,7 @@
 - [🛠️ Technology Stack](#️-technology-stack)
 - [⚙️ Installation & Configuration](#️-installation--configuration)
 - [🚀 Getting Started](#-getting-started)
+- [📁 Code Folder Analysis](#-code-folder-analysis)
 - [📚 API Documentation](#-api-documentation)
 - [🎨 User Interface](#-user-interface)
 - [🔌 Integrations](#-integrations)
@@ -83,6 +84,14 @@ Then **ArbiterAI** synthesizes these three perspectives to create a solid, actio
 - Code syntax highlighting
 - Smooth scrolling and animations
 - User-friendly welcome screen
+
+### 📁 Code Folder Analysis
+- **Drag & Drop Upload**: Simply drag your project folder
+- **Auto-Filtering**: Automatically ignores `node_modules`, `venv`, `.git`, build outputs
+- **Multi-Language Support**: 80+ file types and programming languages
+- **File Management**: View, search, and manage uploaded files
+- **Syntax Highlighting**: Code viewer with line numbers and copy functionality
+- **Smart Analysis**: AI analyzes entire codebase and provides insights
 
 ---
 
@@ -382,6 +391,107 @@ application that starts small but grows?
 How should I deploy my Next.js application to production? 
 Choose between Vercel, AWS, and DigitalOcean.
 ```
+
+---
+
+## 📁 Code Folder Analysis
+
+### Overview
+One of the most powerful features of ArbiterAI is the ability to analyze entire project folders. Simply drag and drop your project, and the system intelligently processes all code files while automatically filtering out unnecessary folders and build artifacts.
+
+### How It Works
+
+#### Step 1: Select Your Project
+```
+1. Click on "📁 Code Folder Analysis" card on welcome screen
+2. Click "Select Folder" button
+3. Choose your project's root directory
+4. System automatically begins processing
+```
+
+#### Step 2: Automatic Filtering
+The system automatically ignores:
+- **Dependencies**: `node_modules/`, `venv/`, `env/`, `.venv/`
+- **Build Outputs**: `dist/`, `build/`, `.next/`, `.nuxt/`
+- **Version Control**: `.git/`, `.gitignore`
+- **IDE Config**: `.vscode/`, `.idea/`
+- **Cache Dirs**: `__pycache__/`, `.pytest_cache/`, `.cache/`
+- **OS Files**: `.DS_Store`, `Thumbs.db`
+
+#### Step 3: File Review
+```
+1. View all uploaded files in the list
+2. Click any file to view with syntax highlighting
+3. Remove unwanted files if needed
+4. Click "🔍 Analyze" to start AI analysis
+```
+
+#### Step 4: Get Insights
+AI analyzes your entire codebase and provides:
+- Code quality assessment
+- Security vulnerabilities
+- Performance optimization opportunities
+- Architecture recommendations
+- Missing features and improvements
+- Step-by-step implementation plan
+
+### Supported Languages & Formats
+
+**80+ file types supported including:**
+- JavaScript/TypeScript (`.js`, `.ts`, `.tsx`)
+- Python (`.py`, `.pyx`)
+- Java, Go, Rust, C/C++, C#
+- Ruby, PHP, Swift, Kotlin, Dart
+- HTML, CSS, SCSS, Markdown
+- JSON, XML, YAML, SQL, GraphQL
+- Config files: `package.json`, `tsconfig.json`, `Dockerfile`, etc.
+
+### Limitations & Best Practices
+
+**Size Limits:**
+- Maximum file size: 5MB
+- Maximum total size: 50MB
+- Maximum 100 files per upload
+
+**Best Practices:**
+1. Upload complete projects for comprehensive analysis
+2. System auto-filters unnecessary folders
+3. Includes config files automatically (package.json, etc.)
+4. Optimal: 10-50 code files per analysis
+5. Multiple analyses support context from previous results
+
+### Example Scenarios
+
+**React Project:**
+```
+my-react-app/
+├── src/           ✅ All uploaded
+├── public/        ✅ Uploaded
+├── package.json   ✅ Uploaded
+├── tsconfig.json  ✅ Uploaded
+├── node_modules/  ❌ Automatically ignored
+└── .next/         ❌ Automatically ignored
+Result: ~20 files analyzed
+```
+
+**Python Project:**
+```
+my-python-app/
+├── src/           ✅ All .py files
+├── tests/         ✅ Uploaded
+├── requirements.txt ✅ Uploaded
+├── venv/          ❌ Automatically ignored
+└── __pycache__/   ❌ Automatically ignored
+Result: ~15 files analyzed
+```
+
+### Advanced Features
+
+- **Code Viewer**: Syntax-highlighted code with line numbers
+- **File Search**: Filter files by name in the list
+- **Copy to Clipboard**: One-click code copying
+- **Session Management**: Temporary file storage, auto-cleanup after 1 hour
+- **Real-time Streaming**: Live analysis results as they're processed
 
 ---
 
