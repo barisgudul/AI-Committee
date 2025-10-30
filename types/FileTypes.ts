@@ -57,8 +57,9 @@ export const SUPPORTED_FILE_TYPES = [
   '.go',
   // Rust
   '.rs',
-  // C/C++
+  // C/C++/Objective-C
   '.c', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.hh',
+  '.m', '.mm', // Objective-C, Objective-C++
   // C#
   '.cs',
   // Ruby
@@ -123,9 +124,9 @@ export const SUPPORTED_FILE_TYPES = [
  * Dosya boyutu limitleri
  */
 export const FILE_SIZE_LIMITS = {
-  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB per file
-  MAX_TOTAL_SIZE: 50 * 1024 * 1024, // 50MB total
-  MAX_FILE_COUNT: 100, // 100 files max
+  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB per file (dosya başına maksimum)
+  MAX_TOTAL_SIZE: 100 * 1024 * 1024, // 100MB total (artırıldı: 50MB → 100MB)
+  MAX_FILE_COUNT: 1000, // 1000 files max (artırıldı: 100 → 1000)
 } as const;
 
 /**
@@ -147,6 +148,8 @@ export function getLanguageFromFileType(fileName: string): string {
     '.cpp': 'cpp',
     '.h': 'c',
     '.hpp': 'cpp',
+    '.m': 'objectivec',
+    '.mm': 'objectivecpp',
     '.cs': 'csharp',
     '.rb': 'ruby',
     '.php': 'php',

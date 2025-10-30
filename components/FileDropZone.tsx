@@ -70,23 +70,35 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
     const nameLower = entryName.toLowerCase();
     const pathLower = fullPath ? fullPath.toLowerCase() : nameLower;
     
-    // Erken çıkış: node_modules, venv, .git içine girmeyi engelle
+    // Erken çıkış: node_modules, venv, .git, Pods içine girmeyi engelle
     if (pathLower.includes('node_modules') || 
         pathLower.includes('venv') || 
         pathLower.includes('.git') ||
         pathLower.includes('.next') ||
         pathLower.includes('dist') ||
         pathLower.includes('build') ||
-        pathLower.includes('__pycache__')) {
+        pathLower.includes('__pycache__') ||
+        pathLower.includes('/pods/') ||
+        pathLower.includes('pods/') ||
+        entryName.toLowerCase() === 'pods') {
       return true;
     }
     
-    // Ignored klasör isimleri
+    // Ignored klasör isimleri ve build dosya uzantıları
     const ignoredNames = [
       'node_modules', 'venv', '.venv', 'env', '__pycache__',
       '.git', '.next', 'dist', 'build', 'out', '.cache',
-      '.vscode', '.idea', '.DS_Store'
+      '.vscode', '.idea', '.DS_Store', 'Pods' // React Native Pods klasörü
     ];
+    
+    // Build dosya uzantılarını kontrol et
+    const buildExtensions = ['.xcconfig', '.modulemap', '.pch', '.xcscheme', 
+                             '.plist', '.asm', '.S', '.rc', '.meson', '.bak',
+                             '.snap', '.tar.gz', '.dylib'];
+    const fileExtension = entryName.toLowerCase().substring(entryName.lastIndexOf('.'));
+    if (buildExtensions.includes(fileExtension)) {
+      return true;
+    }
     
     return ignoredNames.includes(nameLower);
   }, []);

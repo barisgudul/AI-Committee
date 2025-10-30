@@ -61,10 +61,46 @@ const IGNORED_PATHS = [
   '.yarn',
   // Lock dosyaları yüklenebilir (bazen analiz için gerekli)
   
+  // React Native / iOS
+  'Pods', // CocoaPods dependencies
+  'ios', // iOS build klasörü (genelde build çıktıları içerir)
+  'android/build', // Android build çıktıları
+  'android/app/build',
+  
   // OS
   '.DS_Store',
   'Thumbs.db',
   'desktop.ini',
+  
+  // iOS/React Native build files
+  '*.xcconfig',
+  '*.modulemap',
+  '*.pch',
+  '*.xcscheme',
+  '*.plist', // Info.plist hariç, ama genelde build dosyaları
+  '*.asm',
+  '*.S', // Assembly files
+  '*.rc',
+  '*.rc.in',
+  '*.manifest',
+  '*.meson',
+  '*.bak',
+  '*.snap', // Jest snapshots
+  '*.tar.gz',
+  '*.dylib', // Dynamic libraries
+  '*.dylib.*',
+  'hermes', // Binary executables
+  'hermesc',
+  'hermes-lit',
+  'vlog_is_on.h.in',
+  'logging.h.in',
+  'stl_logging.h.in',
+  'raw_logging.h.in',
+  'version.h.in',
+  'vcs_version.h.in',
+  'Doxyfile.in.in',
+  'config.h.in',
+  'config.h.cmake.in',
 ];
 
 /**
@@ -75,7 +111,12 @@ function shouldIgnorePath(filePath: string): boolean {
   const pathParts = pathLower.split('/').filter(p => p.length > 0);
   
   // Erken çıkış: Eğer path çok uzunsa veya node_modules içindeyse direkt ignore
-  if (pathLower.includes('node_modules') || pathLower.includes('venv') || pathLower.includes('.git')) {
+  if (pathLower.includes('node_modules') || 
+      pathLower.includes('venv') || 
+      pathLower.includes('.git') ||
+      pathLower.includes('/pods/') ||
+      pathLower.includes('pods/') ||
+      pathParts[0] === 'pods') {
     return true;
   }
   
@@ -95,12 +136,23 @@ function shouldIgnorePath(filePath: string): boolean {
       return true;
     }
     
-    // Wildcard dosyalar (*.egg, *.pyc)
+    // Wildcard dosyalar (*.xcconfig, *.modulemap, vb.)
     if (ignoredPath.includes('*')) {
       const pattern = ignoredPath.replace(/\*/g, '').toLowerCase();
+      // Extension kontrolü - dosya adı pattern ile bitiyor mu?
+      if (pathLower.endsWith(pattern)) {
+        return true;
+      }
+      // Veya path içinde pattern var mı? (daha geniş kontrol)
       if (pathLower.includes(pattern)) {
         return true;
       }
+    }
+    
+    // Exact match - belirli dosya adları (hermes, hermesc, vb.)
+    const exactIgnoreNames = ['hermes', 'hermesc', 'hermes-lit'];
+    if (exactIgnoreNames.includes(pathLower.split('/').pop() || '')) {
+      return true;
     }
   }
   
@@ -402,10 +454,28 @@ export function useFileUpload(): UseFileUploadReturn {
           
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: 'Sunucu hatası' }));
-            throw new Error(errorData.error || `Batch ${batchNumber} yükleme başarısız`);
+            const errorMessage = errorData.error || `Batch ${batchNumber} yükleme başarısız`;
+            
+            // Eğer batch'te hiç geçerli dosya yoksa, bu normal bir durum (skip)
+            // "Hiçbir geçerli dosya yüklenmedi" hatası = Batch'teki tüm dosyalar desteklenmiyor
+            if (errorMessage.includes('Hiçbir geçerli dosya') || 
+                errorMessage.includes('geçerli dosya bulunamadı')) {
+              // Bu batch'te geçerli dosya yok, normal - skip et
+              console.log(`[UPLOAD] Batch ${batchNumber} skip edildi (geçerli dosya yok)`);
+              continue;
+            }
+            
+            // Diğer hatalar için throw et
+            throw new Error(errorMessage);
           }
           
           const data = await response.json();
+          
+          // Backend'den dosya gelmediyse (boş batch), skip et
+          if (!data.files || data.files.length === 0) {
+            console.log(`[UPLOAD] Batch ${batchNumber} skip edildi (backend dosya döndürmedi)`);
+            continue;
+          }
           
           // Session ID'yi sakla (her batch'ten - backend her zaman döndürmeli)
           if (data.sessionId) {

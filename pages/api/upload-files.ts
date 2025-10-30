@@ -227,6 +227,29 @@ export default async function handler(
     // Birleştir
     const mergedFiles = [...existingFiles, ...filteredNewFiles];
     
+    // TOPLAM dosya sayısı kontrolü (merge sonrası)
+    if (mergedFiles.length > FILE_SIZE_LIMITS.MAX_FILE_COUNT) {
+      return res.status(400).json({
+        error: `Maksimum dosya sayısı aşıldı`,
+        message: `Session'da ${existingFiles.length} dosya var, ${filteredNewFiles.length} yeni dosya eklenmek isteniyor. Toplam ${mergedFiles.length} dosya olur. Maksimum ${FILE_SIZE_LIMITS.MAX_FILE_COUNT} dosya yüklenebilir.`,
+        currentCount: existingFiles.length,
+        newCount: filteredNewFiles.length,
+        totalCount: mergedFiles.length,
+        limit: FILE_SIZE_LIMITS.MAX_FILE_COUNT
+      });
+    }
+    
+    // TOPLAM dosya boyutu kontrolü (merge sonrası)
+    const totalSize = mergedFiles.reduce((sum, f) => sum + f.size, 0);
+    if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
+      return res.status(400).json({
+        error: `Maksimum toplam dosya boyutu aşıldı`,
+        message: `Toplam dosya boyutu ${(totalSize / 1024 / 1024).toFixed(2)}MB. Maksimum ${(FILE_SIZE_LIMITS.MAX_TOTAL_SIZE / 1024 / 1024).toFixed(2)}MB olabilir.`,
+        currentSize: totalSize,
+        limit: FILE_SIZE_LIMITS.MAX_TOTAL_SIZE
+      });
+    }
+    
     // Session'a kaydet (SET ile REPLACE, değil MERGE!)
     fileStorage.set(sessionId, mergedFiles);
     

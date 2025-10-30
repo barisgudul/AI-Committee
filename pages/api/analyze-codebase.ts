@@ -22,6 +22,8 @@ function createCodebaseAnalysisPrompt(
     `- **${f.path}** (${f.type}, ${formatFileSize(f.size)})`
   ).join('\n');
   
+  // Token limiti yok - TÜM dosyalar detaylı inceleniyor
+  // Her dosyanın tam içeriği prompt'a dahil edilecek
   const fileContents = files.map(f => 
     `\`\`\`${f.language || 'text'}:${f.path}\n${f.content}\n\`\`\``
   ).join('\n\n');
