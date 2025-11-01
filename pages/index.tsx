@@ -1,11 +1,12 @@
 // pages/index.tsx
 
 import React, { useState, useRef, useEffect, FC, FormEvent, useMemo, useCallback } from 'react';
+import Image from 'next/image';
 import styles from '../styles/Home.module.css';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
-import { SendIcon, BrainIcon, ArbiterLogoIcon, ArrowRightIcon } from '../components/Icons';
+import { SendIcon, BrainIcon, ArbiterLogoIcon, ArrowRightIcon, ImageIcon } from '../components/Icons';
 import { ProcessTimeline } from '../components/ProcessTimeline';
 import { useOrchestration } from '../hooks/useOrchestration';
 import { ProcessStep } from '../types/ProcessTypes';
@@ -18,6 +19,7 @@ import { useFileUpload } from '../hooks/useFileUpload';
 interface UserMessage {
   role: 'user';
   text: string;
+  images?: Array<{ data: string; mimeType: string }>; // base64 fotoğraflar
 }
 interface ModelMessage {
   role: 'model';
@@ -139,18 +141,42 @@ const UserMessageComponent: FC<{
 }> = React.memo(({ message }) => {
     // Markdown içeriğini memoize et
     const renderedContent = useMemo(() => (
-        <ReactMarkdown components={markdownComponents}>{message.text}</ReactMarkdown>
+        message.text ? <ReactMarkdown components={markdownComponents}>{message.text}</ReactMarkdown> : null
     ), [message.text]);
+
+    // Fotoğrafları render et
+    const renderedImages = useMemo(() => {
+        if (!message.images || message.images.length === 0) return null;
+        
+        return (
+            <div className={styles.imagePreviewContainer}>
+                {message.images.map((img, index) => (
+                    <div key={index} className={styles.imagePreview}>
+                        <Image 
+                            src={`data:${img.mimeType};base64,${img.data}`}
+                            alt={`Yüklenen fotoğraf ${index + 1}`}
+                            className={styles.previewImage}
+                            width={300}
+                            height={300}
+                            unoptimized
+                        />
+                    </div>
+                ))}
+            </div>
+        );
+    }, [message.images]);
 
     return (
         <div className={`${styles.messageContainer} ${styles.userMessage}`}>
             <div className={styles.messageContent}>
+                {renderedImages}
                 {renderedContent}
             </div>
         </div>
     );
 }, (prevProps, nextProps) => {
-    return prevProps.message.text === nextProps.message.text;
+    return prevProps.message.text === nextProps.message.text &&
+           JSON.stringify(prevProps.message.images) === JSON.stringify(nextProps.message.images);
 });
 
 UserMessageComponent.displayName = 'UserMessageComponent';
@@ -305,6 +331,7 @@ export default function Home() {
     const [history, setHistory] = useState<Message[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
     const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
     
     // --- 2. YENİ STATE: Anında yükleme durumu için ---
@@ -314,6 +341,9 @@ export default function Home() {
     const [showFileModal, setShowFileModal] = useState(false);
     const [showAnalyzeButton, setShowAnalyzeButton] = useState(false);
     const fileUpload = useFileUpload();
+    
+    // --- IMAGE UPLOAD STATE ---
+    const [selectedImages, setSelectedImages] = useState<Array<{ data: string; mimeType: string }>>([]);
     
     // Component mount olduğunda history'yi yükle
     useEffect(() => {
@@ -430,34 +460,149 @@ export default function Home() {
         textareaRef.current?.focus(); // Input'a odaklan
     }, []);
 
+    // --- FOTOĞRAF İŞLEME FONKSİYONLARI ---
+    const convertFileToBase64 = useCallback((file: File): Promise<{ data: string; mimeType: string }> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = reader.result as string;
+                // base64 string'inden "data:image/jpeg;base64," kısmını temizle
+                const base64Data = result.includes(',') ? result.split(',')[1] : result;
+                resolve({
+                    data: base64Data,
+                    mimeType: file.type || 'image/jpeg'
+                });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }, []);
+
+    const handleImageSelect = useCallback(async (files: FileList | File[]) => {
+        const fileArray = Array.from(files);
+        const imageFiles = fileArray.filter(file => file.type.startsWith('image/'));
+        
+        if (imageFiles.length === 0) {
+            return;
+        }
+
+        try {
+            const convertedImages = await Promise.all(
+                imageFiles.map(file => convertFileToBase64(file))
+            );
+            setSelectedImages(prev => [...prev, ...convertedImages]);
+        } catch (error) {
+            console.error('Fotoğraf yükleme hatası:', error);
+            alert('Fotoğraf yüklenirken bir hata oluştu');
+        }
+    }, [convertFileToBase64]);
+
+    const handleImageInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleImageSelect(e.target.files);
+            // Input'u temizle ki aynı dosya tekrar seçilebilsin
+            e.target.value = '';
+        }
+    }, [handleImageSelect]);
+
+    const handleImageClick = useCallback(() => {
+        imageInputRef.current?.click();
+    }, []);
+
+    const removeImage = useCallback((index: number) => {
+        setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    }, []);
+
+    const handleImageDrop = useCallback((e: React.DragEvent<HTMLTextAreaElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleImageSelect(files);
+        }
+    }, [handleImageSelect]);
+
+    const handleImageDragOver = useCallback((e: React.DragEvent<HTMLTextAreaElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
     const handleSubmit = useCallback(async (e?: FormEvent) => {
         e?.preventDefault();
-        if (!input.trim() || isThinking) return;
+        if ((!input.trim() && selectedImages.length === 0) || isThinking) return;
 
         // --- 4. GÖNDERİM BAŞLADIĞINDA STATE'İ GÜNCELLE ---
         setIsSending(true);
         lastProcessedComplete.current = false; // Yeni işlem başladı, ref'i sıfırla
 
-        const newUserMessage: UserMessage = { role: 'user', text: input };
+        const newUserMessage: UserMessage = { 
+            role: 'user', 
+            text: input || (selectedImages.length > 0 ? '[Fotoğraf gönderildi]' : ''),
+            images: selectedImages.length > 0 ? selectedImages : undefined
+        };
         // Son MAX_HISTORY_MESSAGES mesajı tut (bellek optimizasyonu)
         const newHistory = [...history, newUserMessage].slice(-MAX_HISTORY_MESSAGES);
         setHistory(newHistory);
         setInput('');
+        setSelectedImages([]); // Fotoğrafları temizle
 
         // Orchestration hook'unu kullan
         try {
-            await submit(input, history.map(msg => {
+            // History'yi Content formatına çevir
+            const historyContent = history.map(msg => {
                 if (msg.role === 'user') {
-                    return { role: 'user', parts: [{ text: msg.text }] };
+                    const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+                    
+                    // Text ekle (varsa)
+                    if (msg.text && msg.text.trim()) {
+                        parts.push({ text: msg.text });
+                    }
+                    
+                    // Images ekle (varsa)
+                    if (msg.images && msg.images.length > 0) {
+                        msg.images.forEach(img => {
+                            parts.push({
+                                inlineData: {
+                                    mimeType: img.mimeType,
+                                    data: img.data
+                                }
+                            });
+                        });
+                    }
+                    
+                    return { role: 'user' as const, parts };
                 } else { // msg.role === 'model'
-                    return { role: 'model', parts: [{ text: msg.refinedAnalysis }] };
+                    return { role: 'model' as const, parts: [{ text: msg.refinedAnalysis }] };
                 }
-            }));
+            });
+
+            // Yeni mesajı ekle
+            const newParts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+            if (input.trim()) {
+                newParts.push({ text: input });
+            }
+            if (selectedImages.length > 0) {
+                selectedImages.forEach(img => {
+                    newParts.push({
+                        inlineData: {
+                            mimeType: img.mimeType,
+                            data: img.data
+                        }
+                    });
+                });
+            }
+
+            const taskText = input.trim() || (selectedImages.length > 0 ? 'Bu fotoğrafları analiz et' : '');
+            await submit(taskText, [
+                ...historyContent,
+                ...(newParts.length > 0 ? [{ role: 'user' as const, parts: newParts }] : [])
+            ]);
         } catch (submitError) {
             console.error('Submit error:', submitError);
             setIsSending(false); // Gönderim başarısız olursa da yüklemeyi durdur
         }
-    }, [input, isThinking, history, submit]);
+    }, [input, selectedImages, isThinking, history, submit]);
 
     // YENİ FONKSİYON: ENTER VE SHIFT+ENTER KONTROLÜ - useCallback ile optimize edildi
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -712,7 +857,7 @@ export default function Home() {
                             {history.map((msg, index) =>
                                 msg.role === 'user' ? (
                                     <UserMessageComponent 
-                                        key={`user-${index}-${msg.text.substring(0, 20)}`} 
+                                        key={`user-${index}-${msg.text?.substring(0, 20) || ''}-${msg.images?.length || 0}`} 
                                         message={msg}
                                     />
                                 ) : (
@@ -799,7 +944,49 @@ export default function Home() {
             )}
 
             <footer className={styles.footer}>
+                {/* Fotoğraf Önizleme */}
+                {selectedImages.length > 0 && (
+                    <div className={styles.selectedImagesContainer}>
+                        {selectedImages.map((img, index) => (
+                            <div key={index} className={styles.selectedImageWrapper}>
+                                <Image 
+                                    src={`data:${img.mimeType};base64,${img.data}`}
+                                    alt={`Seçili fotoğraf ${index + 1}`}
+                                    className={styles.selectedImage}
+                                    width={60}
+                                    height={60}
+                                    unoptimized
+                                />
+                                <button
+                                    type="button"
+                                    className={styles.removeImageButton}
+                                    onClick={() => removeImage(index)}
+                                    aria-label="Fotoğrafı kaldır"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className={styles.inputForm}>
+                    <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageInputChange}
+                        style={{ display: 'none' }}
+                    />
+                    <button
+                        type="button"
+                        className={styles.imageButton}
+                        onClick={handleImageClick}
+                        disabled={isThinking}
+                        aria-label="Fotoğraf ekle"
+                    >
+                        <ImageIcon />
+                    </button>
                     <textarea
                         ref={textareaRef}
                         className={`${styles.input} ${isThinking ? styles.inputThinking : ''}`}
@@ -809,8 +996,14 @@ export default function Home() {
                         disabled={isThinking}
                         rows={1} // Tek satır olarak başla
                         onKeyDown={handleKeyDown} // Klavye olaylarını dinle
+                        onDrop={handleImageDrop} // Fotoğraf sürükle-bırak
+                        onDragOver={handleImageDragOver}
                     />
-                    <button type="submit" className={styles.sendButton} disabled={isThinking || !input.trim()}>
+                    <button 
+                        type="submit" 
+                        className={styles.sendButton} 
+                        disabled={isThinking || (!input.trim() && selectedImages.length === 0)}
+                    >
                         <SendIcon />
                     </button>
                 </form>

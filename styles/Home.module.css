@@ -549,10 +549,13 @@
 
 .inputForm {
   position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
 }
 
 .input {
-  width: 100%;
+  flex: 1;
   padding: 1rem 1.25rem;
   padding-right: 3.5rem;
   border-radius: 12px; /* Köşeleri biraz daha keskinleştirelim */
@@ -650,6 +653,106 @@
 
 .disclaimer {
     display: none; /* Artık daha temiz bir görünüm için bunu gizleyebiliriz */
+}
+
+/* Fotoğraf Yükleme Stilleri */
+.imageButton {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  background-color: #e9e9e9;
+  color: #666;
+}
+
+.imageButton:hover:not(:disabled) {
+  background-color: #d1d1d1;
+  color: #333;
+  transform: scale(1.05);
+}
+
+.imageButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.selectedImagesContainer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  overflow-x: auto;
+  margin-bottom: 0.5rem;
+}
+
+.selectedImageWrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background-color: var(--secondary-background);
+}
+
+.selectedImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.removeImageButton {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.removeImageButton:hover {
+  background-color: rgba(244, 67, 54, 0.9);
+  transform: scale(1.1);
+}
+
+/* Mesajlardaki Fotoğraf Önizleme */
+.imagePreviewContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.imagePreview {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  max-width: 300px;
+  max-height: 300px;
+}
+
+.previewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 /* Orchestration için yeni stiller */

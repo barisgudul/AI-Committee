@@ -208,3 +208,12 @@ export default async function handler(
   }
 }
 
+// Next.js body parser config - fotoğraf gönderimi için body size limit'ini artır
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb', // Fotoğraflar base64 formatında büyük olabilir
+    },
+  },
+};
+

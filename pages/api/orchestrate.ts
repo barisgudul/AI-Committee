@@ -9,6 +9,15 @@ import { Content } from "@google/generative-ai";
 //   runtime: 'edge',
 // };
 
+// Next.js body parser config - fotoğraf gönderimi için body size limit'ini artır
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb', // Fotoğraflar base64 formatında büyük olabilir
+    },
+  },
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
