@@ -9,6 +9,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import { SendIcon, BrainIcon, ArbiterLogoIcon, ArrowRightIcon, ImageIcon } from '../components/Icons';
 import { ProcessTimeline } from '../components/ProcessTimeline';
 import { useOrchestration } from '../hooks/useOrchestration';
+import { useCodeAnalysis } from '../hooks/useCodeAnalysis';
 import { ProcessStep } from '../types/ProcessTypes';
 import { ThinkingProcess } from '../components/ThinkingProcess';
 import { FileDropZone } from '../components/FileDropZone';
@@ -368,6 +369,9 @@ export default function Home() {
         reset
     } = useOrchestration();
     
+    // Kod analizi hook'u
+    const { analyzeCode } = useCodeAnalysis();
+    
     // İşlem tamamlanma durumunu track etmek için ref kullan (döngü önleme!)
     const lastProcessedComplete = useRef(false);
     
@@ -658,157 +662,71 @@ export default function Home() {
         const newUserMessage: UserMessage = { role: 'user', text: analysisMessage };
         setHistory(prev => [...prev, newUserMessage]);
         
+        // Yeni bir model mesajı oluştur (streaming için)
+        const streamingMessage: ModelMessage = {
+            role: 'model',
+            initialAnalysis: '',
+            refinedAnalysis: ''
+        };
+        
+        // Başlangıç mesajını history'ye ekle
+        setHistory(prev => [...prev, streamingMessage]);
+        
         try {
-            // Özel API endpoint'i için custom fetch
-            const requestBody = { 
-                sessionId: fileUpload.sessionId,
-                analysisType: 'full',
-                history: history.map(msg => ({
+            // useCodeAnalysis hook'unu kullan
+            await analyzeCode(
+                fileUpload.sessionId,
+                history.map(msg => ({
                     role: msg.role,
                     parts: [{ text: msg.role === 'user' ? msg.text : msg.refinedAnalysis }]
-                }))
-            };
-            
-            console.log('[ANALYZE] Request body:', { ...requestBody, history: `[${requestBody.history.length} items]` });
-            
-            const response = await fetch('/api/analyze-codebase', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody),
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Bilinmeyen hata' }));
-                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-            }
-            
-            // SSE stream'i işle ve history'ye ekle
-            const reader = response.body?.getReader();
-            if (!reader) {
-                throw new Error('Response body is not readable');
-            }
-            
-            const decoder = new TextDecoder();
-            let buffer = '';
-            let analysisText = '';
-            
-            // Yeni bir model mesajı oluştur (streaming için)
-            const streamingMessage: ModelMessage = {
-                role: 'model',
-                initialAnalysis: '',
-                refinedAnalysis: ''
-            };
-            
-            // Başlangıç mesajını history'ye ekle
-            setHistory(prev => [...prev, streamingMessage]);
-            
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-                
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const eventData = JSON.parse(line.slice(6));
-                            
-                            // Debug: Event tiplerini logla
-                            if (process.env.NODE_ENV === 'development') {
-                                console.log('[ANALYZE-FRONTEND] Event:', eventData.type, eventData.source);
-                            }
-                            
-                            // Stream control events'leri atla
-                            if (eventData.type === 'stream_start' || eventData.type === 'stream_end') {
-                                continue;
-                            }
-                            
-                            // Event tipine göre işle
-                            if (eventData.type === 'final_chunk') {
-                                // Streaming chunk'ı birleştir (hem arbiter hem refiner'dan gelebilir)
-                                const chunk = eventData.payload?.chunk || '';
-                                if (chunk) {
-                                    analysisText += chunk;
-                                    
-                                    // Streaming mesajını güncelle
-                                    setHistory(prev => {
-                                        const updated = [...prev];
-                                        const lastMessage = updated[updated.length - 1];
-                                        if (lastMessage && lastMessage.role === 'model') {
-                                            updated[updated.length - 1] = {
-                                                ...lastMessage,
-                                                refinedAnalysis: analysisText
-                                            };
-                                        }
-                                        return updated;
-                                    });
-                                }
-                            } else if (eventData.type === 'status') {
-                                // Status event'i - completed durumunda fullAnalysis var mı kontrol et
-                                if (eventData.payload?.status === 'completed') {
-                                    // Refiner veya Arbiter tamamlandı - fullAnalysis'ı al
-                                    const fullAnalysis = eventData.payload?.fullAnalysis;
-                                    if (fullAnalysis && typeof fullAnalysis === 'string') {
-                                        analysisText = fullAnalysis; // Tam analizi kullan
-                                    }
-                                    
-                                    // Final mesajı güncelle
-                                    setHistory(prev => {
-                                        const updated = [...prev];
-                                        const lastMessage = updated[updated.length - 1];
-                                        if (lastMessage && lastMessage.role === 'model') {
-                                            updated[updated.length - 1] = {
-                                                ...lastMessage,
-                                                refinedAnalysis: analysisText,
-                                                initialAnalysis: analysisText
-                                            };
-                                        }
-                                        return updated;
-                                    });
-                                }
-                            } else if (eventData.type === 'error') {
-                                // Hata durumu
-                                const errorMsg = eventData.payload?.error || 'Analiz sırasında bir hata oluştu';
-                                setHistory(prev => {
-                                    const updated = [...prev];
-                                    const lastMessage = updated[updated.length - 1];
-                                    if (lastMessage && lastMessage.role === 'model') {
-                                        updated[updated.length - 1] = {
-                                            ...lastMessage,
-                                            refinedAnalysis: `❌ **Hata**\n\n${errorMsg}`
-                                        };
-                                    }
-                                    return updated;
-                                });
-                            }
-                        } catch (e) {
-                            console.warn('[ANALYZE-FRONTEND] Event parse error:', e, line);
+                })),
+                'full',
+                // onUpdate callback - streaming güncellemeleri
+                (text) => {
+                    setHistory(prev => {
+                        const updated = [...prev];
+                        const lastMessage = updated[updated.length - 1];
+                        if (lastMessage && lastMessage.role === 'model') {
+                            updated[updated.length - 1] = {
+                                ...lastMessage,
+                                refinedAnalysis: text
+                            };
                         }
-                    }
+                        return updated;
+                    });
+                },
+                // onComplete callback - analiz tamamlandı
+                (text) => {
+                    setHistory(prev => {
+                        const updated = [...prev];
+                        const lastMessage = updated[updated.length - 1];
+                        if (lastMessage && lastMessage.role === 'model') {
+                            updated[updated.length - 1] = {
+                                ...lastMessage,
+                                refinedAnalysis: text,
+                                initialAnalysis: text
+                            };
+                        }
+                        return updated;
+                    });
+                    setIsSending(false);
+                },
+                // onError callback - hata durumu
+                (errorMsg) => {
+                    setHistory(prev => {
+                        const updated = [...prev];
+                        const lastMessage = updated[updated.length - 1];
+                        if (lastMessage && lastMessage.role === 'model') {
+                            updated[updated.length - 1] = {
+                                ...lastMessage,
+                                refinedAnalysis: `❌ **Hata**\n\n${errorMsg}`
+                            };
+                        }
+                        return updated;
+                    });
+                    setIsSending(false);
                 }
-            }
-            
-            // Stream tamamlandı - eğer mesaj hala boşsa final güncelleme yap
-            if (analysisText) {
-                setHistory(prev => {
-                    const updated = [...prev];
-                    const lastMessage = updated[updated.length - 1];
-                    if (lastMessage && lastMessage.role === 'model') {
-                        updated[updated.length - 1] = {
-                            ...lastMessage,
-                            refinedAnalysis: analysisText,
-                            initialAnalysis: analysisText
-                        };
-                    }
-                    return updated;
-                });
-            }
-            
-            setIsSending(false);
+            );
             
             // Analiz sonrası dosyaları temizle (isteğe bağlı)
             // fileUpload.clearAllFiles();
@@ -825,7 +743,7 @@ export default function Home() {
             };
             setHistory(prev => [...prev, errorMessage]);
         }
-    }, [fileUpload, history]);
+    }, [fileUpload, history, analyzeCode]);
     
     // Dosyalar değiştiğinde analyze butonunu göster/gizle
     useEffect(() => {

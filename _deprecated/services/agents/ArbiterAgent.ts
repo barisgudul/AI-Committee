@@ -1,9 +1,9 @@
 // services/agents/ArbiterAgent.ts
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Content, SchemaType, GenerateContentResult, SafetySetting, Tool } from "@google/generative-ai";
-import { ARBITER_AI_PROMPT } from '../../lib/prompts';
-import { performSearch, searchCodeExamples } from '../tools';
-import { Agent, AgentStreamEvent, AgentStatus } from '../../types/AgentTypes';
+import { ARBITER_AI_PROMPT } from '../../../lib/prompts';
+import { performSearch, searchCodeExamples } from '../../../services/tools';
+import { Agent, AgentStreamEvent, AgentStatus } from '../../../types/AgentTypes';
 import { setTimeout as setTimeoutPromise } from 'timers/promises';
 
 export class ArbiterAgent implements Agent {

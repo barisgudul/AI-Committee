@@ -1,14 +1,19 @@
 // pages/api/orchestrate.ts
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import { OrchestratorService } from '../../_deprecated/services/OrchestratorService';
+import { OrchestratorService } from '../../services/OrchestratorService';
 import { Content } from "@google/generative-ai";
 
-// Next.js body parser config
+// The config for the edge runtime is commented out, so we use Node.js runtime syntax.
+// export const config = {
+//   runtime: 'edge',
+// };
+
+// Next.js body parser config - fotoğraf gönderimi için body size limit'ini artır
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '50mb',
+      sizeLimit: '50mb', // Fotoğraflar base64 formatında büyük olabilir
     },
   },
 };
@@ -43,11 +48,12 @@ export default async function handler(
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+    res.flushHeaders(); // Send headers immediately
 
     // OrchestratorService'i başlat
     const orchestrator = new OrchestratorService();
     
+    // Write events directly to the response object
     try {
       // Stream başlangıç sinyali
       res.write('data: {"type":"stream_start"}\n\n');
@@ -61,9 +67,9 @@ export default async function handler(
       // Stream bitiş sinyali
       res.write('data: {"type":"stream_end"}\n\n');
       
-    } catch (streamError) {
-      console.error("Stream Hatası:", streamError);
-      const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+    } catch (error) {
+      console.error("Stream Hatası:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const errorData = `data: ${JSON.stringify({
         source: 'orchestrator',
         type: 'error',
@@ -75,17 +81,19 @@ export default async function handler(
       })}\n\n`;
       res.write(errorData);
     } finally {
+      // End the response when the stream is finished
       res.end();
     }
 
   } catch (error: unknown) {
     console.error("API Handler Hatası:", error);
+    // Note: If headers are already sent, this error response might not reach the client.
+    // The error is logged on the server.
     if (!res.headersSent) {
       const errorMessage = error instanceof Error ? error.message : 'Sunucuda bilinmeyen bir hata oluştu.';
       res.status(500).json({ error: errorMessage });
     } else {
-      res.end();
+        res.end();
     }
   }
 }
-

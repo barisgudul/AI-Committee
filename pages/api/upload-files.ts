@@ -9,33 +9,8 @@ import {
   getLanguageFromFileType 
 } from '../../types/FileTypes';
 
-// Session-based storage (geçici - production'da Redis/Memory cache kullanılabilir)
-// Global object kullanarak hot reload'dan koruma
-declare global {
-  var __fileStorage: Map<string, UploadedFile[]> | undefined;
-}
-
-// Hot reload'dan korumak için global object kullan
-const fileStorage = global.__fileStorage || new Map<string, UploadedFile[]>();
-if (!global.__fileStorage) {
-  global.__fileStorage = fileStorage;
-}
-
-// Session timeout - 1 saat
-const SESSION_TIMEOUT = 60 * 60 * 1000;
-
-// Session cleanup fonksiyonu
-const cleanupExpiredSessions = () => {
-  const now = Date.now();
-  for (const [sessionId, files] of fileStorage.entries()) {
-    if (files.length > 0 && now - files[0].uploadedAt > SESSION_TIMEOUT) {
-      fileStorage.delete(sessionId);
-    }
-  }
-};
-
-// Her 10 dakikada bir cleanup çalıştır
-setInterval(cleanupExpiredSessions, 10 * 60 * 1000);
+// Dağıtık key-value storage - sunucusuz ortamlar için uyumlu
+import { fileStorage } from '../../lib/kv-storage';
 
 /**
  * Dosya tipinin desteklenip desteklenmediğini kontrol et
@@ -208,7 +183,7 @@ export default async function handler(
     }
     
     // Session'a MERGE et (önceki dosyaları koru, yeni dosyaları ekle)
-    const existingFiles = fileStorage.get(sessionId) || [];
+    const existingFiles = (await fileStorage.get(sessionId)) || [];
     
     // Duplicate kontrol: Existing files'dan gelen path'leri tanı
     const existingPaths = new Set(existingFiles.map(f => f.path));
@@ -251,13 +226,11 @@ export default async function handler(
     }
     
     // Session'a kaydet (SET ile REPLACE, değil MERGE!)
-    fileStorage.set(sessionId, mergedFiles);
+    await fileStorage.set(sessionId, mergedFiles);
     
     // Debug: Storage kaydı
     console.log(`[UPLOAD-API] SessionId: ${sessionId}`);
     console.log(`[UPLOAD-API] Files saved: ${mergedFiles.length} (${filteredNewFiles.length} new)`);
-    console.log(`[UPLOAD-API] Storage size after save: ${fileStorage.size}`);
-    console.log(`[UPLOAD-API] Storage keys:`, Array.from(fileStorage.keys()));
     
     if (finalDuplicateCount > 0) {
       console.info(`Final: ${finalDuplicateCount} duplicate session'dan filtrelendi`);
@@ -290,8 +263,7 @@ export default async function handler(
   }
 }
 
-// Export storage for other API routes
-export { fileStorage };
+// Note: fileStorage artık lib/kv-storage.ts'den import ediliyor
 
 // Next.js body parser config - request body size limit'ini artır
 export const config = {

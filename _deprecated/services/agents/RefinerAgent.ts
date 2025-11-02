@@ -1,8 +1,8 @@
 // services/agents/RefinerAgent.ts
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, GenerateContentResult, SafetySetting } from "@google/generative-ai";
-import { REFINER_AI_PROMPT } from '../../lib/refiner_prompt';
-import { Agent, AgentStreamEvent, AgentStatus } from '../../types/AgentTypes';
+import { REFINER_AI_PROMPT } from '../../../lib/refiner_prompt';
+import { Agent, AgentStreamEvent, AgentStatus } from '../../../types/AgentTypes';
 import { setTimeout as setTimeoutPromise } from 'timers/promises';
 
 export class RefinerAgent implements Agent {

@@ -19,8 +19,11 @@ export class ChiefArchitectAgent implements Agent {
   private primaryModelName = process.env.DEFAULT_AGENT_MODEL || "gemini-2.5-pro";
   private fallbackModelName = "gemini-2.5-flash";
 
-  constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY as string);
+  constructor(apiKey: string) {
+    if (!apiKey) {
+      throw new Error('API key is required for ChiefArchitectAgent');
+    }
+    this.genAI = new GoogleGenerativeAI(apiKey);
     
     // --- 2. DEĞİŞİKLİK: Ayarları constructor'da sakla ---
     this.safetySettings = [

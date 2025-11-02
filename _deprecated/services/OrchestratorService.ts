@@ -2,7 +2,7 @@
 
 import { ArbiterAgent } from './agents/ArbiterAgent';
 import { RefinerAgent } from './agents/RefinerAgent';
-import { AgentStreamEvent, AgentStatus } from '../types/AgentTypes';
+import { AgentStreamEvent, AgentStatus } from '../../types/AgentTypes';
 import { Content } from "@google/generative-ai";
 
 export class OrchestratorService {

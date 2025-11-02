@@ -3,8 +3,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { OrchestratorService } from '../../services/OrchestratorService';
 import { Content } from "@google/generative-ai";
-import { UploadedFile, formatFileSize } from '../../types/FileTypes';
-import { fileStorage } from './upload-files';
+import { UploadedFile, formatFileSize } from '../../../types/FileTypes';
+import { fileStorage } from '../../../pages/api/upload-files';
 
 // Debug: FileStorage kontrolü (module load zamanında)
 console.log('[ANALYZE-API-INIT] fileStorage reference check:', fileStorage);
