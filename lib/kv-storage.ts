@@ -112,5 +112,18 @@ function createStorage(): KVStorage {
  * File storage - dağıtık key-value store kullanır
  * Sunucusuz ortamlarda (Vercel) tüm fonksiyonların aynı state'e erişmesini garanti eder
  */
-export const fileStorage: KVStorage = createStorage();
+// Global singleton: Development ortamında HMR ve farklı API route bundle'ları
+// arasında aynı in-memory instance'ın paylaşılmasını garanti eder.
+declare global {
+  // eslint-disable-next-line no-var
+  var __fileStorage__: KVStorage | undefined;
+}
+
+export const fileStorage: KVStorage =
+  (globalThis as unknown as { __fileStorage__?: KVStorage }).__fileStorage__ || createStorage();
+
+// İlk kez oluşturulduysa global'a ata
+if (!(globalThis as unknown as { __fileStorage__?: KVStorage }).__fileStorage__) {
+  (globalThis as unknown as { __fileStorage__?: KVStorage }).__fileStorage__ = fileStorage;
+}
 

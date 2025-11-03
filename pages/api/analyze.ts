@@ -46,7 +46,9 @@ export default async function handler(
     if (!files || files.length === 0) {
       return res.status(400).json({ 
         error: 'Bu session için dosya bulunamadı',
-        message: `Session ID: ${sessionId}. Lütfen önce dosyaları yükleyin.`
+        message: `Session ID: ${sessionId}. Lütfen önce dosyaları yükleyin.`,
+        sessionId,
+        filesFound: Array.isArray(files) ? files.length : 0
       });
     }
 

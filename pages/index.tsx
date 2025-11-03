@@ -647,6 +647,18 @@ export default function Home() {
         console.log('[ANALYZE] SessionId:', fileUpload.sessionId);
         console.log('[ANALYZE] Files count:', fileUpload.files.length);
         
+        // YÜKLEME TAMAMLANANA DEK BEKLE (gating)
+        // uploadStatus.completed durumunu bekle, kısa backoff ile birkaç kez dene
+        let waitAttempts = 0;
+        const maxWaitAttempts = 5; // ~2.5s toplam (5 * 500ms)
+        while (
+            waitAttempts < maxWaitAttempts &&
+            (fileUpload.uploadStatus.status === 'uploading' || fileUpload.uploadStatus.status === 'processing')
+        ) {
+            await new Promise(r => setTimeout(r, 500));
+            waitAttempts += 1;
+        }
+        
         setShowFileModal(false);
         setIsSending(true);
         lastProcessedComplete.current = false;
@@ -671,6 +683,34 @@ export default function Home() {
         
         // Başlangıç mesajını history'ye ekle
         setHistory(prev => [...prev, streamingMessage]);
+        
+        // Kullanıcıya net geri bildirim: başlangıç ve olası bekleme
+        const waitedMs = waitAttempts * 500;
+        if (waitedMs > 0) {
+            setHistory(prev => {
+                const updated = [...prev];
+                const lastMessage = updated[updated.length - 1];
+                if (lastMessage && lastMessage.role === 'model') {
+                    updated[updated.length - 1] = {
+                        ...lastMessage,
+                        refinedAnalysis: `⏳ Analiz başlatılıyor... Yüklemelerin tamamlanması bekleniyor (~${waitedMs}ms)`
+                    };
+                }
+                return updated;
+            });
+        } else {
+            setHistory(prev => {
+                const updated = [...prev];
+                const lastMessage = updated[updated.length - 1];
+                if (lastMessage && lastMessage.role === 'model') {
+                    updated[updated.length - 1] = {
+                        ...lastMessage,
+                        refinedAnalysis: '🔍 Analiz başlatılıyor...'
+                    };
+                }
+                return updated;
+            });
+        }
         
         try {
             // useCodeAnalysis hook'unu kullan

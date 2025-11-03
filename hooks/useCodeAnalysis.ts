@@ -83,18 +83,48 @@ export function useCodeAnalysis(): CodeAnalysisReturn {
         }))
       };
 
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-        signal: abortControllerRef.current.signal,
-      });
+      // 400 için geri çekilmeli retry: 2 denemelik (500ms, 1000ms)
+      let response: Response | null = null;
+      const backoffs = [500, 1000];
+      for (let attempt = 0; attempt <= backoffs.length; attempt++) {
+        response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: abortControllerRef.current.signal,
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Bilinmeyen hata' }));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        if (response.ok) break;
+
+        // Hata gövdesini parse et ve koşullu retry uygula
+        let errorText = '';
+        try {
+          const errJson = await response.json();
+          errorText = (errJson?.error as string) || '';
+        } catch {
+          // text olarak dene
+          try {
+            errorText = await response.text();
+          } catch {
+            errorText = '';
+          }
+        }
+
+        const isMissingFiles = errorText.includes('Bu session için dosya bulunamadı');
+        if (response.status === 400 && isMissingFiles && attempt < backoffs.length) {
+          await new Promise(r => setTimeout(r, backoffs[attempt]));
+          continue; // yeniden dene
+        }
+
+        // Diğer durumlarda döngüden çık ve normal hata işle
+        break;
+      }
+
+      if (!response || !response.ok) {
+        const errorData = response ? await response.json().catch(() => ({ error: 'Bilinmeyen hata' })) : { error: 'Sunucuya ulaşılamadı' };
+        throw new Error(errorData.error || `HTTP error! status: ${response?.status}`);
       }
 
       // SSE stream'i işle
