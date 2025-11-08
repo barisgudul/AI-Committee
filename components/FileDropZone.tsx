@@ -30,12 +30,14 @@ interface FileDropZoneProps {
   onFilesSelected: (files: FileList | File[]) => void;
   uploadStatus: FileUploadStatus;
   disabled?: boolean;
+  className?: string;
 }
 
 export const FileDropZone: React.FC<FileDropZoneProps> = ({ 
   onFilesSelected, 
   uploadStatus,
-  disabled = false 
+  disabled = false,
+  className
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -282,8 +284,10 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
 
   const isUploading = uploadStatus.status === 'uploading' || uploadStatus.status === 'processing';
 
+  const containerClassName = [styles.container, className].filter(Boolean).join(' ');
+
   return (
-    <div className={styles.container}>
+    <div className={containerClassName}>
       <div
         className={`${styles.dropZone} ${isDragging ? styles.dragging : ''} ${disabled ? styles.disabled : ''}`}
         onDragEnter={handleDragEnter}

@@ -993,11 +993,244 @@
 
 .fileModalContent {
     flex: 1;
-    overflow-y: auto;
     padding: 2rem;
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    gap: 2rem;
+    overflow-y: auto;
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.05), transparent 60%),
+                radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.04), transparent 55%);
+}
+
+.modalSidebar {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.25rem;
+    position: sticky;
+    top: 2rem;
+    align-self: start;
+}
+
+.sidebarIntro {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sidebarEyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-tertiary, #6b7280);
+}
+
+.sidebarIntro h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--foreground, #f8fafc);
+}
+
+.sidebarIntro p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #9ca3af);
+}
+
+.sidebarDropZone {
+    max-width: 100%;
+    margin: 0;
+}
+
+.statusCard {
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.statusCard-uploading,
+.statusCard-processing {
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(37, 99, 235, 0.12);
+}
+
+.statusCard-completed {
+    border-color: rgba(34, 197, 94, 0.35);
+    background: rgba(22, 101, 52, 0.12);
+}
+
+.statusCard-error {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(220, 38, 38, 0.12);
+}
+
+.statusHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--primary-color, #3b82f6);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+.statusCard-processing .statusDot,
+.statusCard-uploading .statusDot {
+    background: var(--primary-color, #3b82f6);
+}
+
+.statusCard-completed .statusDot {
+    background: var(--success-color, #22c55e);
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+}
+
+.statusCard-error .statusDot {
+    background: var(--error-color, #ef4444);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+.statusLabel {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--foreground, #f3f4f6);
+    letter-spacing: 0.02em;
+}
+
+.statusMessage {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-secondary, #94a3b8);
+}
+
+.statGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.statCard {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.statLabel {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary, #6b7280);
+}
+
+.statValue {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--foreground, #f9fafb);
+}
+
+.statHint {
+    font-size: 0.7rem;
+    color: var(--text-tertiary, #94a3b8);
+}
+
+.sessionCard {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.16), rgba(14, 116, 144, 0.16));
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sessionRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.sessionLabel {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-tertiary, #a5b4fc);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.sessionValue {
+    font-size: 0.9rem;
+    color: var(--foreground, #ede9fe);
+    font-family: 'IBM Plex Mono', monospace;
+    background: rgba(17, 24, 39, 0.45);
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.modalMain {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-height: 0;
+}
+
+.modalMainHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.modalMainHeader h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--foreground, #f8fafc);
+}
+
+.modalMainHeader p {
+    margin: 0.3rem 0 0;
+    color: var(--text-secondary, #94a3b8);
+    font-size: 0.9rem;
+}
+
+.modalMainBody {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 16px;
+    padding: 1.25rem;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.modalEmptyState {
+    margin: auto;
+    text-align: center;
+    color: var(--text-secondary, #94a3b8);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.modalEmptyIcon {
+    font-size: 3rem;
 }
 
 .fileModalFooter {
@@ -1067,6 +1300,20 @@
 
     .fileModalContent {
         padding: 1.5rem;
+        grid-template-columns: 1fr;
+    }
+
+    .modalSidebar {
+        position: static;
+    }
+
+    .modalMainHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .statGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .fileModalHeader h2 {
@@ -1086,6 +1333,10 @@
 
     .fileModalContent {
         padding: 1rem;
+    }
+
+    .statGrid {
+        grid-template-columns: 1fr;
     }
 
     .analyzeButton {

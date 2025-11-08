@@ -1,7 +1,7 @@
 // hooks/useFileUpload.ts
 
 import { useState, useCallback, useRef } from 'react';
-import { UploadedFile, FileUploadStatus, FILE_SIZE_LIMITS } from '../types/FileTypes';
+import { UploadedFile, FileUploadStatus, FileUploadStats } from '../types/FileTypes';
 import { v4 as uuidv4 } from 'uuid';
 
 interface UseFileUploadReturn {
@@ -13,6 +13,7 @@ interface UseFileUploadReturn {
   clearAllFiles: () => void;
   getFileContent: (fileId: string) => string | null;
   totalSize: number;
+  stats: FileUploadStats;
 }
 
 /**
@@ -259,6 +260,13 @@ export function useFileUpload(): UseFileUploadReturn {
   });
   const [sessionId, setSessionId] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const [stats, setStats] = useState<FileUploadStats>({
+    uploadedCount: 0,
+    ignoredCount: 0,
+    duplicateCount: 0,
+    skippedCount: 0,
+    lastUploadAt: null
+  });
 
   const uploadFiles = useCallback(async (fileList: FileList | File[]) => {
     setUploadStatus({ status: 'uploading', progress: 0, message: 'Dosyalar okunuyor...' });
@@ -507,7 +515,17 @@ export function useFileUpload(): UseFileUploadReturn {
       }
       
       // Tüm dosyaları state'e ekle
-      setFiles(prevFiles => [...prevFiles, ...allNewFiles]);
+      setFiles(prevFiles => {
+        const mergedFiles = [...prevFiles, ...allNewFiles];
+        setStats({
+          uploadedCount: mergedFiles.length,
+          ignoredCount,
+          duplicateCount,
+          skippedCount,
+          lastUploadAt: Date.now()
+        });
+        return mergedFiles;
+      });
       
       // Detaylı mesaj oluştur
       const messageParts = [`${allNewFiles.length} dosya yüklendi`];
@@ -544,7 +562,14 @@ export function useFileUpload(): UseFileUploadReturn {
   }, []);
 
   const removeFile = useCallback((fileId: string) => {
-    setFiles(prevFiles => prevFiles.filter(f => f.id !== fileId));
+    setFiles(prevFiles => {
+      const filtered = prevFiles.filter(f => f.id !== fileId);
+      setStats(prevStats => ({
+        ...prevStats,
+        uploadedCount: filtered.length
+      }));
+      return filtered;
+    });
   }, []);
 
   const clearAllFiles = useCallback(() => {
@@ -552,6 +577,13 @@ export function useFileUpload(): UseFileUploadReturn {
     setSessionId(null);
     sessionIdRef.current = null;
     setUploadStatus({ status: 'idle', progress: 0 });
+    setStats({
+      uploadedCount: 0,
+      ignoredCount: 0,
+      duplicateCount: 0,
+      skippedCount: 0,
+      lastUploadAt: null
+    });
   }, []);
 
   const getFileContent = useCallback((fileId: string): string | null => {
@@ -569,7 +601,8 @@ export function useFileUpload(): UseFileUploadReturn {
     removeFile,
     clearAllFiles,
     getFileContent,
-    totalSize
+    totalSize,
+    stats
   };
 }
 

@@ -4,7 +4,11 @@
   background: var(--background-secondary, #1a1a1a);
   border-radius: 12px;
   padding: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .header {
@@ -79,9 +83,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: 400px;
+  max-height: 100%;
   overflow-y: auto;
   padding-right: 0.5rem;
+  flex: 1;
 }
 
 /* Custom scrollbar */

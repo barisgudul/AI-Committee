@@ -15,6 +15,7 @@ import { ThinkingProcess } from '../components/ThinkingProcess';
 import { FileDropZone } from '../components/FileDropZone';
 import { FileList } from '../components/FileList';
 import { useFileUpload } from '../hooks/useFileUpload';
+import { formatFileSize } from '../types/FileTypes';
 
 // State yapımızı güncelliyoruz
 interface UserMessage {
@@ -383,6 +384,42 @@ export default function Home() {
     // isLoading: Backend'den ilk veri geldiğinde true olur.
     // isThinking: İkisinden biri true ise, arayüz yükleme modundadır.
     const isThinking = isSending || isLoading;
+
+    const statusCardClass = useMemo(() => {
+        const modifier = styles[`statusCard-${fileUpload.uploadStatus.status}`];
+        return [styles.statusCard, modifier].filter(Boolean).join(' ');
+    }, [fileUpload.uploadStatus.status]);
+
+    const uploadStatusLabel = useMemo(() => {
+        switch (fileUpload.uploadStatus.status) {
+            case 'uploading':
+                return 'Dosyalar okunuyor';
+            case 'processing':
+                return 'Sunucuya aktarılıyor';
+            case 'completed':
+                return 'Yükleme tamamlandı';
+            case 'error':
+                return 'Yükleme hatası';
+            default:
+                return 'Hazır';
+        }
+    }, [fileUpload.uploadStatus.status]);
+
+    const uploadStatusMessage = fileUpload.uploadStatus.error
+        ? fileUpload.uploadStatus.error
+        : fileUpload.uploadStatus.message || 'Hazırsanız dosyalarınızı ekleyin.';
+
+    const sessionDisplay = fileUpload.sessionId
+        ? `${fileUpload.sessionId.slice(0, 8)}…${fileUpload.sessionId.slice(-4)}`
+        : 'Henüz oluşturulmadı';
+
+    const lastUploadDisplay = fileUpload.stats.lastUploadAt
+        ? new Date(fileUpload.stats.lastUploadAt).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })
+        : 'Bekleniyor';
+
+    const fileSummaryText = fileUpload.files.length > 0
+        ? `${fileUpload.files.length} dosya seçildi, analiz için hazır.`
+        : 'Henüz dosya seçmediniz. Soldan yüklemeye başlayın.';
     
     // Process steps'i filtrele - useMemo ile sadece değiştiğinde hesapla
     const filteredSteps = useMemo(() => 
@@ -872,31 +909,89 @@ export default function Home() {
                             </button>
                         </div>
                         <div className={styles.fileModalContent}>
-                            <FileDropZone 
-                                onFilesSelected={handleFilesSelected}
-                                uploadStatus={fileUpload.uploadStatus}
-                                disabled={fileUpload.uploadStatus.status === 'uploading'}
-                            />
-                            {fileUpload.files.length > 0 && (
-                                <FileList 
-                                    files={fileUpload.files}
-                                    onRemoveFile={fileUpload.removeFile}
-                                    onClearAll={fileUpload.clearAllFiles}
-                                    getFileContent={fileUpload.getFileContent}
-                                />
-                            )}
-                        </div>
-                        {showAnalyzeButton && fileUpload.files.length > 0 && (
-                            <div className={styles.fileModalFooter}>
-                                <button 
-                                    className={styles.analyzeButton}
-                                    onClick={handleAnalyzeCode}
+                            <aside className={styles.modalSidebar}>
+                                <div className={styles.sidebarIntro}>
+                                    <span className={styles.sidebarEyebrow}>Yükleme Merkezi</span>
+                                    <h3>Kod klasörünü birkaç saniyede içeri al</h3>
+                                    <p>Proje klasörünü sürükle-bırak ya da seç. Desteklenmeyen ya da tekrarlayan dosyaları otomatik filtreliyoruz.</p>
+                                </div>
+                                <FileDropZone 
+                                    onFilesSelected={handleFilesSelected}
+                                    uploadStatus={fileUpload.uploadStatus}
                                     disabled={fileUpload.uploadStatus.status === 'uploading'}
-                                >
-                                    🔍 Analiz Et ({fileUpload.files.length} dosya)
-                                </button>
-                            </div>
-                        )}
+                                    className={styles.sidebarDropZone}
+                                />
+                                <div className={statusCardClass}>
+                                    <div className={styles.statusHeader}>
+                                        <span className={styles.statusDot} />
+                                        <span className={styles.statusLabel}>{uploadStatusLabel}</span>
+                                    </div>
+                                    <p className={styles.statusMessage}>{uploadStatusMessage}</p>
+                                </div>
+                                <div className={styles.statGrid}>
+                                    <div className={styles.statCard}>
+                                        <span className={styles.statLabel}>Toplam Dosya</span>
+                                        <span className={styles.statValue}>{fileUpload.files.length}</span>
+                                    </div>
+                                    <div className={styles.statCard}>
+                                        <span className={styles.statLabel}>Toplam Boyut</span>
+                                        <span className={styles.statValue}>{fileUpload.files.length > 0 ? formatFileSize(fileUpload.totalSize) : '0 Bytes'}</span>
+                                    </div>
+                                    <div className={styles.statCard}>
+                                        <span className={styles.statLabel}>Atlanan</span>
+                                        <span className={styles.statValue}>{fileUpload.stats.ignoredCount + fileUpload.stats.skippedCount}</span>
+                                        <span className={styles.statHint}>ignored + filtrelenen</span>
+                                    </div>
+                                    <div className={styles.statCard}>
+                                        <span className={styles.statLabel}>Çift Kopya</span>
+                                        <span className={styles.statValue}>{fileUpload.stats.duplicateCount}</span>
+                                        <span className={styles.statHint}>tekilleştirildi</span>
+                                    </div>
+                                </div>
+                                <div className={styles.sessionCard}>
+                                    <div className={styles.sessionRow}>
+                                        <span className={styles.sessionLabel}>Oturum Kimliği</span>
+                                        <code className={styles.sessionValue}>{sessionDisplay}</code>
+                                    </div>
+                                    <div className={styles.sessionRow}>
+                                        <span className={styles.sessionLabel}>Son Yükleme</span>
+                                        <span className={styles.sessionValue}>{lastUploadDisplay}</span>
+                                    </div>
+                                </div>
+                            </aside>
+                            <section className={styles.modalMain}>
+                                <div className={styles.modalMainHeader}>
+                                    <div>
+                                        <h3>Proje Dosyaları</h3>
+                                        <p>{fileSummaryText}</p>
+                                    </div>
+                                    {showAnalyzeButton && fileUpload.files.length > 0 && (
+                                        <button 
+                                            className={styles.analyzeButton}
+                                            onClick={handleAnalyzeCode}
+                                            disabled={fileUpload.uploadStatus.status === 'uploading'}
+                                        >
+                                            🔍 Analiz Et ({fileUpload.files.length})
+                                        </button>
+                                    )}
+                                </div>
+                                <div className={styles.modalMainBody}>
+                                    {fileUpload.files.length > 0 ? (
+                                        <FileList 
+                                            files={fileUpload.files}
+                                            onRemoveFile={fileUpload.removeFile}
+                                            onClearAll={fileUpload.clearAllFiles}
+                                            getFileContent={fileUpload.getFileContent}
+                                        />
+                                    ) : (
+                                        <div className={styles.modalEmptyState}>
+                                            <div className={styles.modalEmptyIcon}>🗂️</div>
+                                            <p>Başlamak için soldaki alana dosya veya klasör bırakın.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             )}

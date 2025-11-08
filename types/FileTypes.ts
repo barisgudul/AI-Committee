@@ -35,6 +35,17 @@ export interface FileUploadStatus {
 }
 
 /**
+ * Dosya yükleme istatistikleri
+ */
+export interface FileUploadStats {
+  uploadedCount: number;
+  ignoredCount: number;
+  duplicateCount: number;
+  skippedCount: number;
+  lastUploadAt: number | null;
+}
+
+/**
  * Dosya validasyon sonucu
  */
 export interface FileValidationResult {
